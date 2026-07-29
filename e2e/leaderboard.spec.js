@@ -101,6 +101,14 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     );
   await expect(page.locator("footer").getByRole("link", { name: "DeepSWE by DataCurve" }))
     .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
+  await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
+    "content",
+    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png",
+  );
+  await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
+    "content",
+    "summary_large_image",
+  );
   await expect(page.locator(".chart-point")).toHaveCount(3);
   expect(await page.locator(".chart-section").evaluate((chart) => (
     Boolean(chart.compareDocumentPosition(document.querySelector(".controls"))

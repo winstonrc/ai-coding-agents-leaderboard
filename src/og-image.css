@@ -1,0 +1,43 @@
+/* SPDX-License-Identifier: MPL-2.0 */
+
+html,
+body {
+  width: 1200px;
+  height: 630px;
+  overflow: hidden;
+  color: #111;
+  background: #fff;
+}
+
+.site-nav,
+.site-header,
+.site-footer,
+#status-panel,
+.controls,
+.table-section,
+.provenance,
+.chart-detail {
+  display: none !important;
+}
+
+main.page-width {
+  width: 1200px;
+  max-width: none;
+  padding: 24px 34px 0;
+}
+
+.chart-section {
+  margin: 0;
+}
+
+.section-heading {
+  margin-bottom: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+
+.value-chart {
+  width: 100%;
+  height: 535px;
+  min-height: 0;
+}
