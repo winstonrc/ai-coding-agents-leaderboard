@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://deepswe.datacurve.ai; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
     >
     <meta
       name="description"
@@ -140,11 +140,11 @@
           calculation; it does not pin or replay a historical dataset.
         </p>
         <p>
-          The site applies Formula v1 to the latest available
+          The site applies Formula v1 to the latest fully validated daily copy of the
           <a href="https://deepswe.datacurve.ai/" rel="noreferrer">published benchmark data</a>
           from the pinned v1.1 aggregate feed. This independent project is not
-          affiliated with or endorsed by the benchmark publisher. It keeps no data
-          snapshots, so rankings are unavailable during an upstream outage.
+          affiliated with or endorsed by the benchmark publisher. A failed refresh
+          cannot replace the last valid copy.
         </p>
       </section>
     </main>

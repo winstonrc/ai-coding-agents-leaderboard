@@ -7,6 +7,7 @@ will get me the strongest results in the shortest amount of time so that I can
 iterate faster?"
 
 The data source is the pinned v1.1 feed published at https://deepswe.datacurve.ai/.
+The site is independent and unaffiliated.
 
 ## Formula v1
 
@@ -39,4 +40,12 @@ npm run test:e2e
 ```
 
 `npm run build` copies the self-hosted static site into `dist/`. The browser tests use
-only synthetic fixtures; benchmark responses and tasks are not committed.
+only synthetic fixtures.
+
+The Pages workflow refreshes one rolling, validated aggregate response at 16:00 UTC
+each day and on manual dispatch. Code-only pushes reuse that file, so browsers and
+ordinary deployments do not query the upstream service. A failed validation leaves
+the previously published response in place.
+
+MPL-2.0 covers this project’s original software, not third-party benchmark data or
+trademarks.

@@ -4,7 +4,8 @@ import {
   DATASET_VERSION,
   FeedValidationError,
   MAX_RESPONSE_BYTES,
-  SOURCE_URL,
+  PUBLISHED_FEED_URL,
+  UPSTREAM_SOURCE_URL,
   parseAndValidateFeed,
   readBoundedResponseText,
 } from "./data/validate-feed.js";
@@ -177,7 +178,7 @@ async function fetchFeed(attemptedAt) {
   const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
   try {
-    const response = await fetch(SOURCE_URL, {
+    const response = await fetch(PUBLISHED_FEED_URL, {
       cache: "no-cache",
       credentials: "omit",
       referrerPolicy: "no-referrer",
@@ -834,7 +835,7 @@ function renderProvenance() {
   elements.generatedAt.textContent = formatDate(state.feed.generatedAt);
   elements.fetchedAt.textContent = formatDate(state.fetchedAt);
   elements.contentHash.textContent = state.contentHash;
-  elements.sourceLink.href = SOURCE_URL;
+  elements.sourceLink.href = UPSTREAM_SOURCE_URL;
   elements.sourceLink.textContent = `Published aggregate feed (${DATASET_VERSION})`;
 }
 

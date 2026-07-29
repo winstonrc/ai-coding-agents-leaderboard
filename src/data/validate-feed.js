@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MPL-2.0
 
-export const SOURCE_URL = "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json";
+export const UPSTREAM_SOURCE_URL = "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json";
+export const PUBLISHED_FEED_URL = "./data/leaderboard-v1.1.json";
 export const DATASET_VERSION = "v1.1";
 export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
 export const MAX_ROWS = 1_000;

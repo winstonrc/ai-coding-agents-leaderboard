@@ -2,7 +2,7 @@
 
 import { expect, test } from "@playwright/test";
 
-const sourceUrl = "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json";
+const sourceUrl = "**/data/leaderboard-v1.1.json";
 
 function row(overrides = {}) {
   return {
