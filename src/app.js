@@ -17,6 +17,7 @@ import {
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
+const PUBLISHED_FEED_METADATA_URL = "./data/feed-metadata.json";
 const CHART_SERIES_COUNT = 10;
 const EFFORT_ORDER = new Map([
   ["low", 0],
@@ -52,17 +53,14 @@ const elements = {
   chartDetail: document.querySelector("#chart-detail"),
   tableBody: document.querySelector("#leaderboard-body"),
   emptyState: document.querySelector("#empty-state"),
-  datasetVersion: document.querySelector("#dataset-version"),
   generatedAt: document.querySelector("#generated-at"),
   fetchedAt: document.querySelector("#fetched-at"),
-  contentHash: document.querySelector("#content-hash"),
   sourceLink: document.querySelector("#source-link"),
 };
 
 const state = {
   feed: null,
   fetchedAt: null,
-  contentHash: null,
   priorities: { ...FORMULA_V1.defaultPriorities },
   lastValidPriorities: { ...FORMULA_V1.defaultPriorities },
   performanceFloor: 0.6,
@@ -124,7 +122,6 @@ function formatDate(value) {
     day: "numeric",
     hour: "numeric",
     minute: "2-digit",
-    timeZone: "UTC",
     timeZoneName: "short",
   }).format(new Date(value));
 }
@@ -169,15 +166,7 @@ function setSuccessStatus(rowCount) {
   elements.leaderboard.hidden = false;
 }
 
-async function sha256(text) {
-  const bytes = new TextEncoder().encode(text);
-  const digest = await crypto.subtle.digest("SHA-256", bytes);
-  return Array.from(new Uint8Array(digest))
-    .map((value) => value.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-async function fetchFeed(attemptedAt) {
+async function fetchFeed() {
   const controller = new AbortController();
   const timeout = window.setTimeout(() => controller.abort(), FETCH_TIMEOUT_MS);
 
@@ -204,11 +193,24 @@ async function fetchFeed(attemptedAt) {
 
     const text = await readBoundedResponseText(response);
     const feed = parseAndValidateFeed(text);
-    return {
-      feed,
-      attemptedAt,
-      contentHash: await sha256(text),
-    };
+    const metadataResponse = await fetch(PUBLISHED_FEED_METADATA_URL, {
+      cache: "no-cache",
+      credentials: "omit",
+      referrerPolicy: "no-referrer",
+      signal: controller.signal,
+    });
+    if (!metadataResponse.ok) {
+      throw new Error(`Feed metadata returned HTTP ${metadataResponse.status}.`);
+    }
+    const metadata = await metadataResponse.json();
+    if (
+      !metadata
+      || typeof metadata.fetched_at !== "string"
+      || Number.isNaN(new Date(metadata.fetched_at).getTime())
+    ) {
+      throw new FeedValidationError("Feed metadata has an invalid fetched_at timestamp.");
+    }
+    return { feed, fetchedAt: metadata.fetched_at };
   } finally {
     window.clearTimeout(timeout);
   }
@@ -219,10 +221,9 @@ async function loadFeed() {
   const attemptedAt = new Date();
 
   try {
-    const result = await fetchFeed(attemptedAt);
+    const result = await fetchFeed();
     state.feed = result.feed;
-    state.fetchedAt = result.attemptedAt;
-    state.contentHash = result.contentHash;
+    state.fetchedAt = result.fetchedAt;
     renderModelFilter();
     renderProvenance();
     render();
@@ -874,10 +875,8 @@ function renderChart(configurations) {
 }
 
 function renderProvenance() {
-  elements.datasetVersion.textContent = state.feed.datasetVersion;
   elements.generatedAt.textContent = formatDate(state.feed.generatedAt);
   elements.fetchedAt.textContent = formatDate(state.fetchedAt);
-  elements.contentHash.textContent = state.contentHash;
   elements.sourceLink.href = UPSTREAM_SOURCE_URL;
   elements.sourceLink.textContent = `Published aggregate feed (${DATASET_VERSION})`;
 }

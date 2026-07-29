@@ -43,10 +43,11 @@ npm run test:e2e
 only synthetic fixtures.
 
 The Pages workflow refreshes one rolling, validated aggregate response at 16:00 UTC
-each day and on manual dispatch. Code-only pushes reuse that file, so browsers and
-ordinary deployments do not query the upstream service. A failed validation leaves
-the previously published response in place. Every deployment also renders the current
-default chart as a 1200×630 Open Graph image.
+each day and on manual dispatch, and records when that upstream fetch succeeded.
+Code-only pushes reuse those files, so browsers and ordinary deployments do not query
+the upstream service. A failed validation leaves the previously published response in
+place. Every deployment also renders the current default chart as a 1200×630 Open
+Graph image.
 
 MPL-2.0 covers this project’s original software, not third-party benchmark data or
 trademarks.

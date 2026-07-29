@@ -484,10 +484,6 @@ th {
   font-variant-numeric: tabular-nums;
 }
 
-.provenance .hash-row {
-  grid-column: 1 / -1;
-}
-
 .methodology {
   max-width: 850px;
 }
@@ -514,17 +510,6 @@ th {
 
 code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
-}
-
-.site-footer {
-  padding: 20px 0 32px;
-  border-top: 1px solid;
-  font-size: 0.9rem;
-  text-align: center;
-}
-
-.site-footer p {
-  margin-bottom: 6px;
 }
 
 @media (max-width: 720px) {

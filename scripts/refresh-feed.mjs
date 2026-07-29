@@ -12,6 +12,7 @@ import {
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
 const destination = path.join(root, "src", "data", "leaderboard-v1.1.json");
+const metadataDestination = path.join(root, "src", "data", "feed-metadata.json");
 
 const response = await fetch(UPSTREAM_SOURCE_URL, {
   headers: { accept: "application/json" },
@@ -37,3 +38,7 @@ const publishedText = text.endsWith("\n") ? text : `${text}\n`;
 
 await mkdir(path.dirname(destination), { recursive: true });
 await writeFile(destination, publishedText);
+await writeFile(
+  metadataDestination,
+  `${JSON.stringify({ fetched_at: new Date().toISOString() }, null, 2)}\n`,
+);

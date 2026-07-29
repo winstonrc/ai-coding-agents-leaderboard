@@ -3,6 +3,7 @@
 import { expect, test } from "@playwright/test";
 
 const sourceUrl = "**/data/leaderboard-v1.1.json";
+const metadataUrl = "**/data/feed-metadata.json";
 
 function row(overrides = {}) {
   return {
@@ -66,6 +67,11 @@ async function routeFeed(page, body = feed()) {
     contentType: "application/json",
     body: JSON.stringify(body),
   }));
+  await page.route(metadataUrl, (route) => route.fulfill({
+    status: 200,
+    contentType: "application/json",
+    body: JSON.stringify({ fetched_at: "2026-07-29T16:00:00Z" }),
+  }));
 }
 
 test("defaults, floor, table-only Pareto filter, and sorting are independent", async ({ page }) => {
@@ -106,8 +112,6 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
       "href",
       "https://github.com/winstonrc/ai-coding-agents-leaderboard",
     );
-  await expect(page.locator("footer").getByRole("link", { name: "DeepSWE by DataCurve" }))
-    .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
     "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png",
@@ -149,7 +153,21 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#leaderboard-body tr").first().locator(".secondary-metric"))
     .toContainText("Formula v1 index ");
   await expect(page.getByText("Partial task coverage")).toBeVisible();
-  await expect(page.locator("#content-hash")).not.toHaveText("—");
+  await expect(page.getByRole("heading", { name: "Data and methodology" })).toBeVisible();
+  await expect(page.locator(".provenance dt").filter({ hasText: "Source" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Published aggregate feed (v1.1)" }))
+    .toHaveAttribute(
+      "href",
+      "https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json",
+    );
+  await expect(page.locator("#generated-at")).not.toHaveText("—");
+  await expect(page.locator("#fetched-at")).not.toHaveText("—");
+  await expect(page.getByRole("link", { name: "Formula v1 methodology" }))
+    .toHaveAttribute("href", "./methodology/v1.html");
+  await expect(page.getByRole("link", { name: "DeepSWE by DataCurve" }))
+    .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
+  await expect(page.locator("footer")).toHaveCount(0);
+  await expect(page.locator("#content-hash")).toHaveCount(0);
 
   const markerOrder = await page.locator(".chart-point").evaluateAll((markers) => (
     markers.map((marker) => marker.getAttribute("aria-label"))

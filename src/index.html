@@ -185,41 +185,38 @@
         </section>
 
         <section class="provenance" aria-labelledby="provenance-heading">
-          <h2 id="provenance-heading">Source and calculation</h2>
+          <h2 id="provenance-heading">Data and methodology</h2>
           <dl>
-            <div><dt>Dataset</dt><dd id="dataset-version">—</dd></div>
-            <div><dt>Generated</dt><dd id="generated-at">—</dd></div>
-            <div><dt>Fetch attempted</dt><dd id="fetched-at">—</dd></div>
-            <div><dt>Formula</dt><dd data-formula-version>v1</dd></div>
-            <div class="hash-row"><dt>SHA-256</dt><dd id="content-hash">—</dd></div>
+            <div>
+              <dt>Source</dt>
+              <dd>
+                <a
+                  id="source-link"
+                  href="https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json"
+                  rel="noreferrer"
+                >
+                  Published aggregate feed (v1.1)
+                </a>
+              </dd>
+            </div>
+            <div><dt>Data generated</dt><dd id="generated-at">—</dd></div>
+            <div><dt>Data fetched</dt><dd id="fetched-at">—</dd></div>
+            <div>
+              <dt>Formula</dt>
+              <dd><a href="./methodology/v1.html">Formula v1 methodology</a></dd>
+            </div>
           </dl>
           <p>
-            Retry-adjusted cost and time are geometric-retry estimates assuming
-            comparable independent attempts and detectable success. Rankings inherit
-            the source’s exclusion policy and may compare configurations with slightly
-            different attempt coverage.
+            Expected cost and time assume comparable independent retries and detectable
+            success. Coverage may vary because the source excludes some errors.
           </p>
           <p>
-            <a id="source-link" href="https://deepswe.datacurve.ai/" rel="noreferrer">
-              Source data
-            </a>
-            · <a href="./methodology/v1.html">Formula v1 methodology</a>
+            Data published by
+            <a href="https://deepswe.datacurve.ai/" rel="noreferrer">DeepSWE by DataCurve</a>.
+            This leaderboard is independent and unaffiliated.
           </p>
         </section>
       </div>
     </main>
-
-    <footer class="site-footer">
-      <div class="page-width">
-        <p>
-          Data source:
-          <a href="https://deepswe.datacurve.ai/" rel="noreferrer">DeepSWE by DataCurve</a>.
-        </p>
-        <p>
-          Independent and unaffiliated. Formula v1 is a descriptive point-estimate
-          index, not a calibrated utility function.
-        </p>
-      </div>
-    </footer>
   </body>
 </html>
