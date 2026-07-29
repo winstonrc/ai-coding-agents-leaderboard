@@ -17,6 +17,7 @@ import {
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
 const CHART_SERIES_COUNT = 10;
+const CHART_DETAIL_PROMPT = "Focus or hover a point for exact values.";
 const EFFORT_ORDER = new Map([
   ["low", 0],
   ["medium", 1],
@@ -397,6 +398,7 @@ function showChartDetails(configuration, marker, groupId) {
 }
 
 function hideChartDetails() {
+  elements.chartDetail.textContent = CHART_DETAIL_PROMPT;
   elements.chart.querySelector(".chart-crosshair")?.setAttribute("visibility", "hidden");
   elements.chart.querySelectorAll(".chart-series").forEach((element) => {
     element.classList.remove("is-muted");

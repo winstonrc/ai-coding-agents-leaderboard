@@ -126,6 +126,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#chart-detail")).toContainText("expected cost per success");
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
+  await page.locator("#chart-heading").hover();
+  await expect(page.locator("#chart-detail")).toHaveText(
+    "Focus or hover a point for exact values.",
+  );
   await page.locator(".chart-point").nth(1).focus();
   await expect(page.locator("#chart-detail")).toContainText("model-beta [medium]");
   await expect(page.locator(".chart-point").first()).toHaveAttribute("role", "img");
