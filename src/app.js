@@ -503,7 +503,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  xLabel.textContent = "Expected cost per success → lower is better";
+  xLabel.textContent = "Expected cost per success";
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
@@ -513,8 +513,17 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Pass@1 → higher is better";
+  yLabel.textContent = "Pass@1";
   elements.chart.append(yLabel);
+
+  const efficiencyLabel = createSvgElement("text", {
+    x: margin.left + width - 8,
+    y: margin.top + 18,
+    "text-anchor": "end",
+    class: "chart-efficiency-label",
+  });
+  efficiencyLabel.textContent = "most efficient ↗";
+  elements.chart.append(efficiencyLabel);
 
   const groups = new Map();
   for (const configuration of finite) {

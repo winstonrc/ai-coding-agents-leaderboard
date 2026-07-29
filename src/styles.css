@@ -232,6 +232,12 @@ input[type="range"] {
   font-weight: normal;
 }
 
+.chart-efficiency-label {
+  fill: GrayText;
+  font-size: 12px;
+  font-style: italic;
+}
+
 .chart-link {
   fill: none;
   stroke-width: 2;
