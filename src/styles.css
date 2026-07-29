@@ -203,6 +203,7 @@ input[type="range"] {
   flex-wrap: wrap;
   justify-content: flex-end;
   gap: 12px;
+  padding-right: 3.54%;
   margin-bottom: 8px;
   font-size: 0.85rem;
 }
@@ -555,6 +556,7 @@ code {
 
   .chart-legend {
     justify-content: flex-start;
+    padding-right: 0;
   }
 
   .chart-tick,

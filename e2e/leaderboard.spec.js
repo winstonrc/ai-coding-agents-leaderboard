@@ -199,6 +199,19 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "justify-content",
     test.info().project.name === "mobile-320" ? "flex-start" : "flex-end",
   );
+  if (test.info().project.name === "desktop") {
+    const legendRight = await page.locator(".chart-legend").evaluate(
+      (legend) => legend.getBoundingClientRect().right
+        - Number.parseFloat(getComputedStyle(legend).paddingRight),
+    );
+    const plotRight = await page.locator("#value-chart").evaluate(
+      (chart) => {
+        const lines = [...chart.querySelectorAll(".chart-grid")];
+        return Math.max(...lines.map((line) => line.getBoundingClientRect().right));
+      },
+    );
+    expect(Math.abs(legendRight - plotRight)).toBeLessThan(2);
+  }
   const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
     labels.map((label) => ({
       paintOrder: getComputedStyle(label).paintOrder,
