@@ -107,7 +107,7 @@ function formatCurrency(value) {
 }
 
 function formatRelativeValue(value) {
-  return Number.isFinite(value) ? `${value.toFixed(1)}%` : "—";
+  return Number.isFinite(value) ? `${value.toFixed(2)}×` : "—";
 }
 
 function formatDuration(value) {
@@ -422,8 +422,8 @@ function renderTable(configurations) {
       valueCell,
       "span",
       Number.isFinite(configuration.score)
-        ? `Index ${configuration.score.toFixed(1)}`
-        : "Index —",
+        ? `Formula v1 index ${configuration.score.toFixed(1)}`
+        : "Formula v1 index —",
       "secondary-metric",
     );
     row.append(valueCell);
@@ -456,7 +456,7 @@ function clearChart() {
 
 function markerDetails(configuration) {
   const status = configuration.paretoEfficient ? "Pareto-efficient" : "Not Pareto-efficient";
-  return `${configurationName(configuration)} — ${formatRelativeValue(configuration.relativeValue)} relative value, ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, index ${configuration.score.toFixed(1)}. ${status}.`;
+  return `${configurationName(configuration)} — ${formatRelativeValue(configuration.relativeValue)} relative value, ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, Formula v1 index ${configuration.score.toFixed(1)}. ${status}.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {
@@ -596,11 +596,11 @@ function renderChart(configurations) {
   const successTickCount = Math.round(
     (maximumSuccess - minimumSuccess) / successInterval,
   );
-  const relativeValueInterval = 10;
-  const relativeValueTickCount = 100 / relativeValueInterval;
+  const relativeValueInterval = 0.1;
+  const relativeValueTickCount = 1 / relativeValueInterval;
   const x = (passAt1) => margin.left
     + width * (passAt1 - minimumSuccess) / (maximumSuccess - minimumSuccess);
-  const y = (relativeValue) => margin.top + height * (1 - relativeValue / 100);
+  const y = (relativeValue) => margin.top + height * (1 - relativeValue);
 
   const grid = createSvgElement("g");
   for (let index = 0; index <= successTickCount; index += 1) {
@@ -638,7 +638,7 @@ function renderChart(configurations) {
       "text-anchor": "end",
       class: "chart-tick chart-value-tick",
     });
-    label.textContent = `${relativeValue}%`;
+    label.textContent = `${relativeValue.toFixed(1)}×`;
     grid.append(label);
   }
   elements.chart.append(grid);
@@ -659,7 +659,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Relative value";
+  yLabel.textContent = "Relative value (leader = 1.00×)";
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
@@ -905,7 +905,7 @@ function render() {
       ...configuration,
       relativeValue: Number.isFinite(highestScore) && highestScore > 0
         && Number.isFinite(configuration.score)
-        ? configuration.score / highestScore * 100
+        ? configuration.score / highestScore
         : null,
     }));
   const paretoCount = floorEligible.filter(

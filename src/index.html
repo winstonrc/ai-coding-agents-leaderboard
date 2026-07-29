@@ -87,6 +87,10 @@
               <span><i class="legend-marker"></i>Other</span>
             </div>
           </div>
+          <p>
+            Relative value is each configuration’s Formula v1 score divided by
+            the highest eligible score.
+          </p>
           <div class="chart-wrap">
             <svg
               id="value-chart"
@@ -98,8 +102,9 @@
             >
               <desc id="chart-description">
                 First-attempt success rate appears horizontally. Relative value appears
-                vertically and incorporates success rate, expected cost, and expected time.
-                Diamond points are Pareto-efficient across those three outcomes.
+                vertically as a ratio to the eligible leader and incorporates success
+                rate, expected cost, and expected time. Diamond points are Pareto-efficient
+                across those three outcomes.
               </desc>
             </svg>
           </div>

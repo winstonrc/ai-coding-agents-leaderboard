@@ -63,10 +63,13 @@
         <p>
           The interface presents Formula v1 as relative value: each score divided by
           the highest finite score meeting the current success-rate floor. The leader
-          is 100%. Model visibility and the table-only Pareto filter do not change this
+          is 1.00×. Model visibility and the table-only Pareto filter do not change this
           reference; changing priorities or the success-rate floor can change it.
           Relative value preserves Formula v1 ordering and ties. It is a presentation
-          normalization, not an efficiency probability or a new formula version.
+          normalization, not an efficiency probability or a new formula version. A
+          later dataset with a better leader can lower existing configurations’ relative
+          values without changing their measurements, so relative values should only be
+          compared within the same dataset and settings.
         </p>
       </section>
 
