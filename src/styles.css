@@ -49,7 +49,7 @@ body {
 }
 
 .site-header {
-  padding: 28px 0 8px;
+  padding: 28px 0 0;
 }
 
 h1 {
@@ -69,7 +69,7 @@ p {
 }
 
 main {
-  padding-block: 20px 40px;
+  padding-block: 12px 40px;
 }
 
 .status-panel {
@@ -98,7 +98,6 @@ main {
 }
 
 .controls,
-.chart-section,
 .table-section,
 .provenance {
   margin-top: 28px;
@@ -189,7 +188,7 @@ input[type="range"] {
   justify-content: space-between;
   gap: 24px;
   margin-bottom: 12px;
-  padding-top: 20px;
+  padding-top: 12px;
   border-top: 1px solid;
 }
 
