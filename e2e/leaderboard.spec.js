@@ -86,6 +86,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#cost-priority-value")).toHaveText("30%");
   await expect(page.locator("#time-priority-value")).toHaveText("10%");
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
+  await expect(page.getByText("Success rate priority", { exact: true })).toBeVisible();
+  await expect(page.getByText("Minimum success rate", { exact: true })).toBeVisible();
+  await expect(page.locator(".chart-axis-label").last()).toHaveText("Success rate (Pass@1)");
+  await expect(page.getByRole("columnheader", { name: "Success rate" })).toBeVisible();
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).toBeChecked();
@@ -155,7 +159,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(4);
 
   await page.locator(".chart-point").first().hover();
-  await expect(page.locator("#chart-detail")).toContainText("expected cost per success");
+  await expect(page.locator("#chart-detail")).toContainText("first-attempt success");
   await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
   await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("HIGH");

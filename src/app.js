@@ -454,7 +454,7 @@ function niceInterval(value) {
 
 function markerDetails(configuration) {
   const status = configuration.paretoEfficient ? "Pareto-efficient" : "Not Pareto-efficient";
-  return `${configurationName(configuration)} — ${formatPercent(configuration.passAt1)} Pass@1, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, value index ${configuration.score.toFixed(1)}. ${status}.`;
+  return `${configurationName(configuration)} — ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, value index ${configuration.score.toFixed(1)}. ${status}.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {
@@ -645,7 +645,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Pass@1";
+  yLabel.textContent = "Success rate (Pass@1)";
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
