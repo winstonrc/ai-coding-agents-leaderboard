@@ -463,11 +463,6 @@ th {
   margin-top: 16px;
 }
 
-.provenance {
-  padding-top: 20px;
-  border-top: 1px solid;
-}
-
 .provenance dl {
   display: grid;
   grid-template-columns: repeat(4, minmax(0, 1fr));
