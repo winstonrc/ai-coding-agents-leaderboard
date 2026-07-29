@@ -1,0 +1,95 @@
+// SPDX-License-Identifier: MPL-2.0
+
+import assert from "node:assert/strict";
+import test from "node:test";
+
+import {
+  MAX_RESPONSE_BYTES,
+  parseAndValidateFeed,
+} from "../src/data/validate-feed.js";
+import { feed, feedRow } from "./fixtures.js";
+
+function parse(value) {
+  return parseAndValidateFeed(JSON.stringify(value));
+}
+
+test("unrecognized model and effort labels require no registry changes", () => {
+  const parsed = parse(feed({
+    rows: [feedRow({
+      model: "future-model-9",
+      reasoning_effort: "ultra",
+    })],
+  }));
+  assert.equal(parsed.configurations[0].model, "future-model-9");
+  assert.equal(parsed.configurations[0].reasoningEffort, "ultra");
+});
+
+test("duplicate identifiers fail closed", () => {
+  assert.throws(
+    () => parse(feed({ rows: [feedRow(), feedRow()] })),
+    /Duplicate configuration identifier/,
+  );
+});
+
+test("impossible coverage fails closed", () => {
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ n_tasks_attempted: 101 })] })),
+    /n_tasks_attempted/,
+  );
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ n_attempted: 99 })] })),
+    /n_attempted/,
+  );
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ n_runs: 0 })] })),
+    /n_runs/,
+  );
+});
+
+test("malformed critical values fail closed", () => {
+  for (const mutation of [
+    { pass_at_1: 2 },
+    { mean_cost_usd: "5" },
+    { mean_duration_seconds: null },
+    { model: "" },
+  ]) {
+    assert.throws(() => parse(feed({ rows: [feedRow(mutation)] })));
+  }
+});
+
+test("oversized responses and excessive rows fail closed", () => {
+  const oversized = JSON.stringify(feed({ padding: "x".repeat(MAX_RESPONSE_BYTES) }));
+  assert.throws(() => parseAndValidateFeed(oversized), /Response exceeds/);
+
+  const rows = Array.from({ length: 1_001 }, (_, index) => (
+    feedRow({ config: `agent-${index}` })
+  ));
+  assert.throws(() => parse(feed({ rows })), /between 1 and 1000/);
+});
+
+test("long external strings fail closed", () => {
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ model: "x".repeat(201) })] })),
+    /exceeds 200/,
+  );
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ ci_method: "x".repeat(201) })] })),
+    /exceeds 200/,
+  );
+});
+
+test("optional values are nullable and missing values stay unavailable", () => {
+  const parsed = parse(feed());
+  assert.equal(parsed.configurations[0].ciHalf, null);
+  assert.equal(parsed.configurations[0].meanOutputTokens, null);
+  assert.equal(parsed.configurations[0].meanAgentSteps, null);
+  assert.equal(parsed.configurations[0].note, null);
+});
+
+test("unequal valid coverage remains rankable and visible to callers", () => {
+  const parsed = parse(feed({
+    rows: [feedRow({ n_tasks_attempted: 90, n_attempted: 95 })],
+  }));
+  assert.equal(parsed.configurations[0].tasksAttempted, 90);
+  assert.equal(parsed.configurations[0].tasksInSet, 100);
+});

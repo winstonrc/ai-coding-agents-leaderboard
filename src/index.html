@@ -1,0 +1,183 @@
+<!doctype html>
+<!-- SPDX-License-Identifier: MPL-2.0 -->
+<html lang="en">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <meta
+      http-equiv="Content-Security-Policy"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src https://deepswe.datacurve.ai; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+    >
+    <meta
+      name="description"
+      content="Performance-, cost-, and speed-aware comparisons of AI coding agents."
+    >
+    <title>AI Coding Agents Leaderboard</title>
+    <link rel="stylesheet" href="./styles.css">
+    <script type="module" src="./app.js"></script>
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="page-width header-content">
+        <div>
+          <p class="eyebrow">Formula <span data-formula-version>v1</span></p>
+          <h1>AI Coding Agents Leaderboard</h1>
+          <p class="intro">
+            Compare coding-agent value using Pass@1 performance, expected cost per
+            success, and expected time per success.
+          </p>
+        </div>
+        <a class="header-link" href="./methodology/v1.html">Methodology</a>
+      </div>
+    </header>
+
+    <main class="page-width">
+      <section id="status-panel" class="status-panel" aria-live="polite">
+        <div>
+          <strong id="status-title">Loading published results…</strong>
+          <p id="status-detail">Validating the source before calculating rankings.</p>
+        </div>
+        <div class="status-actions">
+          <a
+            class="status-source-link"
+            href="https://deepswe.datacurve.ai/artifacts/v1.1/leaderboard-live.json"
+            rel="noreferrer"
+          >
+            Source
+          </a>
+          <button id="retry-button" class="button" type="button" hidden>Retry</button>
+        </div>
+      </section>
+
+      <div id="leaderboard" hidden>
+        <section class="controls" aria-label="Leaderboard controls">
+          <div class="priority-grid">
+            <label class="control" for="pass-priority">
+              <span><span>Pass@1 priority</span><output id="pass-priority-value">60%</output></span>
+              <input id="pass-priority" type="range" min="0" max="100" step="1" value="60">
+            </label>
+            <label class="control" for="cost-priority">
+              <span><span>Cost per success priority</span><output id="cost-priority-value">30%</output></span>
+              <input id="cost-priority" type="range" min="0" max="100" step="1" value="30">
+            </label>
+            <label class="control" for="time-priority">
+              <span><span>Time per success priority</span><output id="time-priority-value">10%</output></span>
+              <input id="time-priority" type="range" min="0" max="100" step="1" value="10">
+            </label>
+            <label class="control" for="performance-floor">
+              <span><span>Pass@1 floor</span><output id="performance-floor-value">≥60%</output></span>
+              <input id="performance-floor" type="range" min="0" max="100" step="1" value="60">
+            </label>
+          </div>
+
+          <div class="filter-row">
+            <label class="select-control" for="sort-by">
+              <span>Rank table by</span>
+              <select id="sort-by">
+                <option value="value">Value index</option>
+                <option value="performance">Performance</option>
+                <option value="cost">Lowest cost per success</option>
+                <option value="speed">Fastest time per success</option>
+              </select>
+            </label>
+            <label class="switch-control" for="pareto-only">
+              <input id="pareto-only" type="checkbox" checked>
+              <span>Table: Pareto-efficient only</span>
+            </label>
+            <p id="visible-count" class="visible-count"></p>
+          </div>
+        </section>
+
+        <section class="chart-section" aria-labelledby="chart-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">All floor-eligible configurations</p>
+              <h2 id="chart-heading">Performance and expected cost</h2>
+            </div>
+            <div class="chart-legend" aria-label="Chart legend">
+              <span><i class="legend-marker pareto-marker"></i>Pareto-efficient</span>
+              <span><i class="legend-marker"></i>Other</span>
+            </div>
+          </div>
+          <div class="chart-wrap">
+            <svg
+              id="value-chart"
+              class="value-chart"
+              viewBox="0 0 960 430"
+              role="img"
+              aria-labelledby="chart-title chart-description"
+            >
+              <title id="chart-title">Pass@1 versus expected cost per success</title>
+              <desc id="chart-description">
+                Lower expected cost appears farther right. Diamond points are
+                Pareto-efficient across performance, expected cost, and expected time.
+              </desc>
+            </svg>
+            <div id="chart-tooltip" class="chart-tooltip" hidden></div>
+          </div>
+          <p id="chart-detail" class="chart-detail" aria-live="polite">
+            Focus or hover a point for exact values.
+          </p>
+        </section>
+
+        <section class="table-section" aria-labelledby="table-heading">
+          <div class="section-heading">
+            <div>
+              <p class="eyebrow">Point-estimate ranking</p>
+              <h2 id="table-heading">Value table</h2>
+            </div>
+          </div>
+          <div class="table-wrap">
+            <table>
+              <thead>
+                <tr>
+                  <th scope="col">Rank</th>
+                  <th scope="col">Configuration</th>
+                  <th scope="col" class="numeric">Index</th>
+                  <th scope="col" class="numeric">Pass@1</th>
+                  <th scope="col" class="numeric">Cost / success</th>
+                  <th scope="col" class="numeric">Time / success</th>
+                  <th scope="col" class="numeric">Coverage</th>
+                </tr>
+              </thead>
+              <tbody id="leaderboard-body"></tbody>
+            </table>
+          </div>
+          <p id="empty-state" class="empty-state" hidden>
+            No configurations meet the current table filters.
+          </p>
+        </section>
+
+        <section class="provenance" aria-labelledby="provenance-heading">
+          <h2 id="provenance-heading">Source and calculation</h2>
+          <dl>
+            <div><dt>Dataset</dt><dd id="dataset-version">—</dd></div>
+            <div><dt>Generated</dt><dd id="generated-at">—</dd></div>
+            <div><dt>Fetch attempted</dt><dd id="fetched-at">—</dd></div>
+            <div><dt>Formula</dt><dd data-formula-version>v1</dd></div>
+            <div class="hash-row"><dt>SHA-256</dt><dd id="content-hash">—</dd></div>
+          </dl>
+          <p>
+            Retry-adjusted cost and time are geometric-retry estimates assuming
+            comparable independent attempts and detectable success. Rankings inherit
+            the source’s exclusion policy and may compare configurations with slightly
+            different attempt coverage.
+          </p>
+          <p>
+            <a id="source-link" href="https://deepswe.datacurve.ai/" rel="noreferrer">
+              Source data
+            </a>
+            · <a href="./methodology/v1.html">Formula v1 methodology</a>
+          </p>
+        </section>
+      </div>
+    </main>
+
+    <footer class="site-footer">
+      <div class="page-width">
+        Independent and unaffiliated. Formula v1 is a descriptive point-estimate index,
+        not a calibrated utility function.
+      </div>
+    </footer>
+  </body>
+</html>
