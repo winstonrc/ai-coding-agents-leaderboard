@@ -398,8 +398,8 @@ function renderTable(configurations) {
       `output tokens ${Number.isFinite(configuration.meanOutputTokens) ? formatNumber(configuration.meanOutputTokens) : "—"}`,
       `steps ${Number.isFinite(configuration.meanAgentSteps) ? formatNumber(configuration.meanAgentSteps, 1) : "—"}`,
       `median attempt ${Number.isFinite(configuration.medianDurationSeconds) ? formatDuration(configuration.medianDurationSeconds / 60) : "—"}`,
-      `note ${configuration.note ?? "—"}`,
     ];
+    if (configuration.note) details.push(`note ${configuration.note}`);
     if (configuration.paretoEfficient) {
       details.push("Pareto-efficient among selected models");
     }

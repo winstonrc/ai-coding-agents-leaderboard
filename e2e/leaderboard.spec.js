@@ -499,8 +499,32 @@ test("external labels are inserted as text and optional metrics show unavailable
   await expect(page.locator(".configuration-detail")).toContainText("output tokens —");
   await expect(page.locator(".configuration-detail")).toContainText("steps —");
   await expect(page.locator(".configuration-detail")).toContainText("median attempt —");
-  await expect(page.locator(".configuration-detail")).toContainText("note —");
+  await expect(page.locator(".configuration-detail")).not.toContainText("note");
   expect(await page.evaluate(() => window.injection)).toBeUndefined();
+});
+
+test("notes render only when supplied by the source", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: [
+      row(),
+      row({
+        config: "agent-beta-high",
+        harness: "agent-beta",
+        model: "model-beta",
+        note: "Uses an alternate tool configuration.",
+      }),
+    ],
+  }));
+  await page.goto("/");
+
+  const alphaDetails = page.locator("#leaderboard-body tr")
+    .filter({ hasText: "model-alpha" })
+    .locator(".configuration-detail");
+  const betaDetails = page.locator("#leaderboard-body tr")
+    .filter({ hasText: "model-beta" })
+    .locator(".configuration-detail");
+  await expect(alphaDetails).not.toContainText("note");
+  await expect(betaDetails).toContainText("note Uses an alternate tool configuration.");
 });
 
 test("unsupported formulas fail without contacting the source", async ({ page }) => {
