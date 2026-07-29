@@ -575,7 +575,7 @@ function renderChart(configurations) {
     return;
   }
 
-  const margin = { top: 28, right: 34, bottom: 62, left: 68 };
+  const margin = { top: 28, right: 34, bottom: 62, left: 92 };
   const width = 960 - margin.left - margin.right;
   const height = 430 - margin.top - margin.bottom;
   const maximumCost = Math.max(

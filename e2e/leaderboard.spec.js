@@ -156,6 +156,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "30 min",
     "40 min",
   ]);
+  const verticalAxisLabelBox = await page.locator(".chart-axis-label").last().boundingBox();
+  const timeTickBoxes = await page.locator(".chart-time-tick").evaluateAll((ticks) => (
+    ticks.map((tick) => {
+      const box = tick.getBoundingClientRect();
+      return { left: box.left, right: box.right };
+    })
+  ));
+  expect(verticalAxisLabelBox.x + verticalAxisLabelBox.width).toBeLessThan(
+    Math.min(...timeTickBoxes.map((box) => box.left)),
+  );
   const costTickPositions = await page.locator(".chart-cost-tick").evaluateAll((ticks) => (
     ticks.map((tick) => Number(tick.getAttribute("x")))
   ));
