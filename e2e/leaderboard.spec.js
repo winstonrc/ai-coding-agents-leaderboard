@@ -141,6 +141,15 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-point-group title")).toHaveCount(0);
   await expect(page.locator("#value-chart")).toHaveAttribute("role", "group");
   await expect(page.locator(".chart-efficiency-label")).toHaveText("more efficient ↙");
+  const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
+    labels.map((label) => ({
+      paintOrder: getComputedStyle(label).paintOrder,
+      strokeWidth: getComputedStyle(label).strokeWidth,
+    }))
+  ));
+  expect(chartLabelStyles.every((style) => (
+    style.paintOrder === "stroke" && style.strokeWidth === "4px"
+  ))).toBe(true);
   await expect(page.locator(".chart-cost-tick")).toHaveText([
     "$0",
     "$2",

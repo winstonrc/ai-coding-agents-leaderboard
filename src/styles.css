@@ -299,7 +299,11 @@ input[type="range"] {
 .chart-label {
   font-size: 13px;
   font-weight: normal;
+  paint-order: stroke;
   pointer-events: none;
+  stroke: Canvas;
+  stroke-linejoin: round;
+  stroke-width: 4px;
 }
 
 .chart-effort-label {
