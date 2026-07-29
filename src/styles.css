@@ -133,6 +133,32 @@ input[type="range"] {
   width: 100%;
 }
 
+.model-filter {
+  margin-bottom: 20px;
+}
+
+.model-filter summary {
+  cursor: pointer;
+}
+
+.model-filter-actions {
+  display: flex;
+  gap: 8px;
+  margin: 10px 0;
+}
+
+.model-options {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 6px 20px;
+}
+
+.model-option {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+}
+
 .filter-row {
   display: flex;
   flex-wrap: wrap;
@@ -484,6 +510,7 @@ code {
 
 @media (max-width: 720px) {
   .priority-grid,
+  .model-options,
   .provenance dl {
     grid-template-columns: 1fr;
   }

@@ -40,6 +40,10 @@ const elements = {
   timePriorityValue: document.querySelector("#time-priority-value"),
   performanceFloor: document.querySelector("#performance-floor"),
   performanceFloorValue: document.querySelector("#performance-floor-value"),
+  modelFilterSummary: document.querySelector("#model-filter-summary"),
+  modelOptions: document.querySelector("#model-options"),
+  selectAllModels: document.querySelector("#select-all-models"),
+  clearModels: document.querySelector("#clear-models"),
   sortBy: document.querySelector("#sort-by"),
   paretoOnly: document.querySelector("#pareto-only"),
   visibleCount: document.querySelector("#visible-count"),
@@ -61,6 +65,7 @@ const state = {
   priorities: { ...FORMULA_V1.defaultPriorities },
   lastValidPriorities: { ...FORMULA_V1.defaultPriorities },
   performanceFloor: 0.6,
+  selectedModelKeys: new Set(),
   sortBy: "value",
   paretoOnly: true,
 };
@@ -213,6 +218,7 @@ async function loadFeed() {
     state.feed = result.feed;
     state.fetchedAt = result.attemptedAt;
     state.contentHash = result.contentHash;
+    renderModelFilter();
     renderProvenance();
     render();
     setSuccessStatus(state.feed.configurations.length);
@@ -226,6 +232,77 @@ async function loadFeed() {
       setErrorStatus("Source outage", error.message || "The source could not be loaded.", attemptedAt);
     }
   }
+}
+
+function modelKey(configuration) {
+  return JSON.stringify([configuration.harness, configuration.model]);
+}
+
+function updateModelFilterSummary(total) {
+  elements.modelFilterSummary.textContent = `Models (${state.selectedModelKeys.size}/${total})`;
+}
+
+function setAllModels(selected) {
+  const inputs = elements.modelOptions.querySelectorAll("input[type=checkbox]");
+  state.selectedModelKeys = new Set(
+    selected ? [...inputs].map((input) => input.dataset.modelKey) : [],
+  );
+  inputs.forEach((input) => {
+    input.checked = selected;
+  });
+  updateModelFilterSummary(inputs.length);
+  render();
+}
+
+function renderModelFilter() {
+  const models = new Map();
+  for (const configuration of state.feed.configurations) {
+    const key = modelKey(configuration);
+    if (!models.has(key)) {
+      models.set(key, {
+        key,
+        model: configuration.model,
+        harness: configuration.harness,
+      });
+    }
+  }
+
+  const modelNameCounts = new Map();
+  for (const { model } of models.values()) {
+    modelNameCounts.set(model, (modelNameCounts.get(model) ?? 0) + 1);
+  }
+
+  const options = [...models.values()]
+    .map((option) => ({
+      ...option,
+      label: modelNameCounts.get(option.model) > 1
+        ? `${option.model} (${option.harness})`
+        : option.model,
+    }))
+    .sort((left, right) => left.label.localeCompare(right.label));
+
+  state.selectedModelKeys = new Set(options.map(({ key }) => key));
+  elements.modelOptions.replaceChildren();
+  for (const option of options) {
+    const label = document.createElement("label");
+    label.className = "model-option";
+    const input = document.createElement("input");
+    input.type = "checkbox";
+    input.checked = true;
+    input.dataset.modelKey = option.key;
+    input.addEventListener("change", () => {
+      if (input.checked) {
+        state.selectedModelKeys.add(option.key);
+      } else {
+        state.selectedModelKeys.delete(option.key);
+      }
+      updateModelFilterSummary(options.length);
+      render();
+    });
+    label.append(input, document.createTextNode(option.label));
+    elements.modelOptions.append(label);
+  }
+  updateModelFilterSummary(options.length);
 }
 
 function readPriorities(changedKey) {
@@ -719,7 +796,10 @@ function renderProvenance() {
 
 function render() {
   if (!state.feed) return;
-  const scored = rankConfigurations(state.feed.configurations, state.priorities);
+  const selectedConfigurations = state.feed.configurations.filter(
+    (configuration) => state.selectedModelKeys.has(modelKey(configuration)),
+  );
+  const scored = rankConfigurations(selectedConfigurations, state.priorities);
   const floorEligible = scored.filter(
     (configuration) => configuration.passAt1 >= state.performanceFloor,
   );
@@ -760,6 +840,8 @@ elements.paretoOnly.addEventListener("change", () => {
   state.paretoOnly = elements.paretoOnly.checked;
   render();
 });
+elements.selectAllModels.addEventListener("click", () => setAllModels(true));
+elements.clearModels.addEventListener("click", () => setAllModels(false));
 elements.retryButton.addEventListener("click", loadFeed);
 
 renderPriorityOutputs();

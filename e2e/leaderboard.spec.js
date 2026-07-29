@@ -86,6 +86,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#cost-priority-value")).toHaveText("30%");
   await expect(page.locator("#time-priority-value")).toHaveText("10%");
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
+  await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).toBeChecked();
   await expect(page.locator("#retry-button")).toBeHidden();
@@ -101,6 +102,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("footer").getByRole("link", { name: "DeepSWE by DataCurve" }))
     .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
   await expect(page.locator(".chart-point")).toHaveCount(3);
+  expect(await page.locator(".chart-section").evaluate((chart) => (
+    Boolean(chart.compareDocumentPosition(document.querySelector(".controls"))
+      & Node.DOCUMENT_POSITION_FOLLOWING)
+  ))).toBe(true);
   await expect(page.locator(".chart-point title").first()).toHaveText("model-alpha [high]");
   await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↖");
   const costTickPositions = await page.locator(".chart-tick").evaluateAll((ticks) => (
@@ -149,6 +154,27 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#time-priority")).toHaveValue("10");
   await expect(page.locator("#time-priority-value")).toHaveText("100%");
   expect(consoleErrors).toEqual([]);
+});
+
+test("shared model filter applies to the chart and table", async ({ page }) => {
+  await routeFeed(page);
+  await page.goto("/");
+
+  await expect(page.locator(".model-option input")).toHaveCount(4);
+  await page.locator("#model-filter-summary").click();
+  await page.getByLabel("model-alpha", { exact: true }).uncheck();
+  await expect(page.locator("#model-filter-summary")).toHaveText("Models (3/4)");
+  await expect(page.locator(".chart-point")).toHaveCount(2);
+  await expect(page.locator("#leaderboard-body")).not.toContainText("model-alpha");
+
+  await page.getByRole("button", { name: "Clear all" }).click();
+  await expect(page.locator("#model-filter-summary")).toHaveText("Models (0/4)");
+  await expect(page.locator(".chart-point")).toHaveCount(0);
+  await expect(page.locator("#leaderboard-body tr")).toHaveCount(0);
+
+  await page.getByRole("button", { name: "Select all" }).click();
+  await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
+  await expect(page.locator(".chart-point")).toHaveCount(3);
 });
 
 test("chart count excludes zero-pass configurations omitted from the plot", async ({ page }) => {

@@ -57,32 +57,10 @@
       </section>
 
       <div id="leaderboard" hidden>
-        <section class="controls" aria-label="Leaderboard controls">
-          <div class="priority-grid">
-            <label class="control" for="pass-priority">
-              <span><span>Pass@1 priority</span><output id="pass-priority-value">60%</output></span>
-              <input id="pass-priority" type="range" min="0" max="100" step="1" value="60">
-            </label>
-            <label class="control" for="cost-priority">
-              <span><span>Cost per success priority</span><output id="cost-priority-value">30%</output></span>
-              <input id="cost-priority" type="range" min="0" max="100" step="1" value="30">
-            </label>
-            <label class="control" for="time-priority">
-              <span><span>Time per success priority</span><output id="time-priority-value">10%</output></span>
-              <input id="time-priority" type="range" min="0" max="100" step="1" value="10">
-            </label>
-            <label class="control" for="performance-floor">
-              <span><span>Pass@1 floor</span><output id="performance-floor-value">≥60%</output></span>
-              <input id="performance-floor" type="range" min="0" max="100" step="1" value="60">
-            </label>
-          </div>
-
-        </section>
-
         <section class="chart-section" aria-labelledby="chart-heading">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">All floor-eligible configurations</p>
+              <p class="eyebrow">Selected floor-eligible configurations</p>
               <h2 id="chart-heading">Performance and expected cost</h2>
             </div>
             <div class="chart-legend" aria-label="Chart legend">
@@ -106,6 +84,35 @@
             </svg>
           </div>
           <p id="chart-detail" class="chart-detail" aria-live="polite"></p>
+        </section>
+
+        <section class="controls" aria-label="Leaderboard controls">
+          <details class="model-filter">
+            <summary id="model-filter-summary">Models</summary>
+            <div class="model-filter-actions">
+              <button id="select-all-models" type="button">Select all</button>
+              <button id="clear-models" type="button">Clear all</button>
+            </div>
+            <div id="model-options" class="model-options" role="group" aria-label="Visible models"></div>
+          </details>
+          <div class="priority-grid">
+            <label class="control" for="pass-priority">
+              <span><span>Pass@1 priority</span><output id="pass-priority-value">60%</output></span>
+              <input id="pass-priority" type="range" min="0" max="100" step="1" value="60">
+            </label>
+            <label class="control" for="cost-priority">
+              <span><span>Cost per success priority</span><output id="cost-priority-value">30%</output></span>
+              <input id="cost-priority" type="range" min="0" max="100" step="1" value="30">
+            </label>
+            <label class="control" for="time-priority">
+              <span><span>Time per success priority</span><output id="time-priority-value">10%</output></span>
+              <input id="time-priority" type="range" min="0" max="100" step="1" value="10">
+            </label>
+            <label class="control" for="performance-floor">
+              <span><span>Pass@1 floor</span><output id="performance-floor-value">≥60%</output></span>
+              <input id="performance-floor" type="range" min="0" max="100" step="1" value="60">
+            </label>
+          </div>
         </section>
 
         <section class="table-section" aria-labelledby="table-heading">
