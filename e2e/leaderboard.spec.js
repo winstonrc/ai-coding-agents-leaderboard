@@ -243,6 +243,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     '.chart-point-label[data-default-visible="true"] text',
   ).evaluateAll((labels) => labels.map((label) => Number(label.getAttribute("y"))));
   expect(Math.max(...defaultLabelYPositions)).toBeLessThanOrEqual(chartBottom - 16);
+  const plotTop = Math.min(...await page.locator(".chart-grid").evaluateAll(
+    (lines) => lines.map((line) => line.getBoundingClientRect().top),
+  ));
+  const defaultLabelTopPositions = await page.locator(
+    '.chart-point-label[data-default-visible="true"] text',
+  ).evaluateAll((labels) => labels.map((label) => label.getBoundingClientRect().top));
+  expect(Math.min(...defaultLabelTopPositions)).toBeGreaterThanOrEqual(plotTop);
   const verticalAxisLabelBox = await page.locator(".chart-axis-label").last().boundingBox();
   const timeTickBoxes = await page.locator(".chart-time-tick").evaluateAll((ticks) => (
     ticks.map((tick) => {

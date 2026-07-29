@@ -555,13 +555,11 @@ function distributeChartLabels(labels, minimumY, maximumY, gap) {
     nextY = label.y + gap;
   }
 
-  const overflow = Math.max(0, nextY - gap - maximumY);
-  for (const label of sorted) {
-    label.y -= overflow;
-  }
-
-  for (let index = sorted.length - 2; index >= 0; index -= 1) {
-    sorted[index].y = Math.min(sorted[index].y, sorted[index + 1].y - gap);
+  if (sorted.at(-1)?.y > maximumY) {
+    sorted.at(-1).y = maximumY;
+    for (let index = sorted.length - 2; index >= 0; index -= 1) {
+      sorted[index].y = Math.min(sorted[index].y, sorted[index + 1].y - gap);
+    }
   }
   return sorted;
 }
@@ -814,7 +812,7 @@ function renderChart(configurations) {
       representative,
       xPosition,
       yPosition,
-      desiredY: yPosition - 7,
+      desiredY: yPosition < margin.top + 50 ? yPosition + 24 : yPosition - 7,
       anchor,
     });
   }
