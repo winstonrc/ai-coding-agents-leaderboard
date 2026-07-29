@@ -827,13 +827,13 @@ function renderChart(configurations) {
       labelGroups.start,
       margin.top + 10,
       margin.top + height - 22,
-      25,
+      34,
     ),
     ...distributeChartLabels(
       labelGroups.end,
       margin.top + 10,
       margin.top + height - 22,
-      25,
+      34,
     ),
   ];
   const defaultLabelPositions = new Map(
@@ -849,7 +849,7 @@ function renderChart(configurations) {
     const defaultPosition = defaultLabelPositions.get(configuration.config);
     const anchor = defaultPosition?.anchor
       ?? (xPosition > margin.left + width * 0.5 ? "end" : "start");
-    const labelX = anchor === "end" ? xPosition - 12 : xPosition + 12;
+    const labelX = anchor === "end" ? xPosition - 16 : xPosition + 16;
     const labelY = defaultPosition?.y
       ?? (yPosition < margin.top + 30 ? yPosition + 24 : yPosition - 22);
     const labelBelowPoint = labelY > yPosition;

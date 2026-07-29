@@ -250,6 +250,32 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     '.chart-point-label[data-default-visible="true"] text',
   ).evaluateAll((labels) => labels.map((label) => label.getBoundingClientRect().top));
   expect(Math.min(...defaultLabelTopPositions)).toBeGreaterThanOrEqual(plotTop);
+  const defaultLabelBoxes = await page.locator(
+    '.chart-point-label[data-default-visible="true"] text',
+  ).evaluateAll((labels) => labels.map((label) => {
+    const box = label.getBoundingClientRect();
+    return {
+      bottom: box.bottom,
+      left: box.left,
+      right: box.right,
+      top: box.top,
+    };
+  }));
+  for (let leftIndex = 0; leftIndex < defaultLabelBoxes.length; leftIndex += 1) {
+    for (
+      let rightIndex = leftIndex + 1;
+      rightIndex < defaultLabelBoxes.length;
+      rightIndex += 1
+    ) {
+      const left = defaultLabelBoxes[leftIndex];
+      const right = defaultLabelBoxes[rightIndex];
+      const overlaps = left.left < right.right
+        && left.right > right.left
+        && left.top < right.bottom
+        && left.bottom > right.top;
+      expect(overlaps).toBe(false);
+    }
+  }
   const defaultConnectorLengths = await page.locator(
     '.chart-point-label[data-default-visible="true"] .chart-label-connector',
   ).evaluateAll((connectors) => connectors.map((connector) => Math.hypot(
