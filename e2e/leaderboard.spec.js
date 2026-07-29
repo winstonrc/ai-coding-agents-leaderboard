@@ -100,12 +100,38 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toHaveText("Expected cost per success");
   await expect(page.locator(".chart-axis-label").last())
     .toHaveText("Expected time per success");
+  await expect(page.locator("thead th")).toHaveText([
+    "Rank",
+    "Configuration",
+    "Relative value",
+    "Success rate",
+    "Cost per success",
+    "Time per success",
+    "Task coverage",
+  ]);
   await expect(page.getByRole("columnheader", {
-    name: "Single-attempt success rate",
-  })).toBeVisible();
+    name: "Relative value compared with the overall eligible leader",
+  })).toHaveAttribute(
+    "title",
+    "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
+  );
   await expect(page.getByRole("columnheader", {
-    name: "Relative to overall eligible leader",
-  })).toBeVisible();
+    name: "Point-estimate single-attempt success rate",
+  })).toHaveAttribute(
+    "title",
+    "Point-estimate single-attempt success rate (Pass@1).",
+  );
+  expect(await page.locator("thead th").evaluateAll((headers) => (
+    headers.map((header) => header.getAttribute("title"))
+  ))).toEqual([
+    "Rank among currently shown configurations.",
+    null,
+    "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
+    "Point-estimate single-attempt success rate (Pass@1).",
+    "Expected cost of the attempts required to produce a successful result.",
+    "Expected cumulative agent time, including retries, required to produce a successful result.",
+    "Tasks attempted divided by the complete task set.",
+  ]);
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).not.toBeChecked();

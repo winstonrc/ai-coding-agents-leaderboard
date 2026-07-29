@@ -168,13 +168,42 @@
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Rank among shown</th>
+                  <th
+                    scope="col"
+                    aria-label="Rank among currently shown configurations"
+                    title="Rank among currently shown configurations."
+                  >Rank</th>
                   <th scope="col">Configuration</th>
-                  <th scope="col" class="numeric">Relative to overall eligible leader</th>
-                  <th scope="col" class="numeric">Single-attempt success rate</th>
-                  <th scope="col" class="numeric">Cost / success</th>
-                  <th scope="col" class="numeric">Cumulative time / success</th>
-                  <th scope="col" class="numeric">Coverage</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Relative value compared with the overall eligible leader"
+                    title="Relative to the highest-value configuration meeting the success floor; 1.00× is the leader."
+                  >Relative value</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Point-estimate single-attempt success rate"
+                    title="Point-estimate single-attempt success rate (Pass@1)."
+                  >Success rate</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Expected cost per successful result"
+                    title="Expected cost of the attempts required to produce a successful result."
+                  >Cost per success</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Expected cumulative agent time per successful result"
+                    title="Expected cumulative agent time, including retries, required to produce a successful result."
+                  >Time per success</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Task coverage"
+                    title="Tasks attempted divided by the complete task set."
+                  >Task coverage</th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body"></tbody>
