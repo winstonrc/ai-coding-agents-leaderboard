@@ -99,7 +99,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-axis-label").first())
     .toHaveText("Expected cost per success");
   await expect(page.locator(".chart-axis-label").last())
-    .toHaveText("Expected cumulative agent time per success");
+    .toHaveText("Expected time per success");
   await expect(page.getByRole("columnheader", {
     name: "Single-attempt success rate",
   })).toBeVisible();

@@ -654,7 +654,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Expected cumulative agent time per success";
+  yLabel.textContent = "Expected time per success";
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
