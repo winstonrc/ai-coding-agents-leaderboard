@@ -77,22 +77,6 @@
             </label>
           </div>
 
-          <div class="filter-row">
-            <label class="select-control" for="sort-by">
-              <span>Rank table by</span>
-              <select id="sort-by">
-                <option value="value">Value index</option>
-                <option value="performance">Performance</option>
-                <option value="cost">Lowest cost per success</option>
-                <option value="speed">Fastest time per success</option>
-              </select>
-            </label>
-            <label class="switch-control" for="pareto-only">
-              <input id="pareto-only" type="checkbox" checked>
-              <span>Table: Pareto-efficient only</span>
-            </label>
-            <p id="visible-count" class="visible-count"></p>
-          </div>
         </section>
 
         <section class="chart-section" aria-labelledby="chart-heading">
@@ -132,6 +116,22 @@
               <p class="eyebrow">Point-estimate ranking</p>
               <h2 id="table-heading">Value table</h2>
             </div>
+          </div>
+          <div class="filter-row" role="group" aria-label="Table controls">
+            <label class="select-control" for="sort-by">
+              <span>Rank table by</span>
+              <select id="sort-by">
+                <option value="value">Value index</option>
+                <option value="performance">Performance</option>
+                <option value="cost">Lowest cost per success</option>
+                <option value="speed">Fastest time per success</option>
+              </select>
+            </label>
+            <label class="switch-control" for="pareto-only">
+              <input id="pareto-only" type="checkbox" checked>
+              <span>Pareto-efficient only</span>
+            </label>
+            <p id="visible-count" class="visible-count"></p>
           </div>
           <div class="table-wrap">
             <table>

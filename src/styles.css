@@ -138,7 +138,7 @@ input[type="range"] {
   flex-wrap: wrap;
   align-items: end;
   gap: 12px 24px;
-  margin-top: 20px;
+  margin-bottom: 20px;
 }
 
 .select-control {
