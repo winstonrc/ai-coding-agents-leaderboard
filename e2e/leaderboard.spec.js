@@ -140,7 +140,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toBe(true);
   await expect(page.locator(".chart-point-group title")).toHaveCount(0);
   await expect(page.locator("#value-chart")).toHaveAttribute("role", "group");
-  await expect(page.locator(".chart-efficiency-label")).toHaveText("more efficient ↙");
+  await expect(page.locator(".chart-efficiency-label")).toHaveCount(0);
+  await expect(page.locator(".chart-section > p").first()).toContainText(
+    "The bottom-left is more efficient.",
+  );
   await expect(page.locator(".chart-legend span")).toHaveText([
     "Pareto-efficient",
     "Not Pareto-efficient",
@@ -169,6 +172,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "30 min",
     "40 min",
   ]);
+  const chartBottom = Number(
+    await page.locator(".chart-time-tick").first().getAttribute("y"),
+  ) - 4;
+  const defaultLabelYPositions = await page.locator(
+    '.chart-point-label[data-default-visible="true"] text',
+  ).evaluateAll((labels) => labels.map((label) => Number(label.getAttribute("y"))));
+  expect(Math.max(...defaultLabelYPositions)).toBeLessThanOrEqual(chartBottom - 16);
   const verticalAxisLabelBox = await page.locator(".chart-axis-label").last().boundingBox();
   const timeTickBoxes = await page.locator(".chart-time-tick").evaluateAll((ticks) => (
     ticks.map((tick) => {

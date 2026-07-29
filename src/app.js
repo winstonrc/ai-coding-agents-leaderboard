@@ -638,15 +638,6 @@ function renderChart(configurations) {
   yLabel.textContent = "Expected time per success";
   elements.chart.append(yLabel);
 
-  const efficiencyLabel = createSvgElement("text", {
-    x: margin.left + 8,
-    y: margin.top + height - 10,
-    "text-anchor": "start",
-    class: "chart-efficiency-label",
-  });
-  efficiencyLabel.textContent = "more efficient ↙";
-  elements.chart.append(efficiencyLabel);
-
   const groups = new Map();
   for (const configuration of finite) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
@@ -796,13 +787,13 @@ function renderChart(configurations) {
     ...distributeChartLabels(
       labelGroups.start,
       margin.top + 10,
-      margin.top + height - 10,
+      margin.top + height - 22,
       25,
     ),
     ...distributeChartLabels(
       labelGroups.end,
       margin.top + 10,
-      margin.top + height - 10,
+      margin.top + height - 22,
       25,
     ),
   ];
