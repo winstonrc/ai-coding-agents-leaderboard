@@ -89,6 +89,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).toBeChecked();
   await expect(page.locator("#retry-button")).toBeHidden();
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Methodology" }))
+    .toHaveAttribute("href", "./methodology/v1.html");
+  await expect(page.getByRole("navigation").getByRole("link", { name: "GitHub" }))
+    .toHaveAttribute(
+      "href",
+      "https://github.com/winstonrc/ai-coding-agents-leaderboard",
+    );
   await expect(page.locator("footer").getByRole("link", { name: "DeepSWE by DataCurve" }))
     .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
   await expect(page.locator(".chart-point")).toHaveCount(3);

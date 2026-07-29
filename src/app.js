@@ -131,6 +131,7 @@ function configurationName(configuration) {
 }
 
 function setLoadingStatus() {
+  elements.statusPanel.hidden = false;
   elements.statusPanel.classList.remove("is-error");
   elements.statusTitle.textContent = "Loading published results…";
   elements.statusDetail.textContent = "Validating the complete source before calculating rankings.";
@@ -139,6 +140,7 @@ function setLoadingStatus() {
 }
 
 function setErrorStatus(category, message, attemptedAt) {
+  elements.statusPanel.hidden = false;
   elements.statusPanel.classList.add("is-error");
   elements.statusTitle.textContent = `${category}: rankings unavailable`;
   elements.statusDetail.textContent = `${message} Last attempted ${formatDate(attemptedAt)}.`;
@@ -149,6 +151,7 @@ function setErrorStatus(category, message, attemptedAt) {
 }
 
 function setSuccessStatus(rowCount) {
+  elements.statusPanel.hidden = true;
   elements.statusPanel.classList.remove("is-error");
   elements.statusTitle.textContent = `${formatNumber(rowCount)} configurations validated`;
   elements.statusDetail.textContent = "Rankings are calculated locally from the complete published response.";

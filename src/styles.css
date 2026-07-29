@@ -21,14 +21,35 @@ body {
 
 .page-width {
   width: 100%;
-  max-width: 1200px;
+  max-width: 980px;
   margin-inline: auto;
   padding-inline: 1em;
 }
 
-.site-header {
-  padding: 28px 0 16px;
+.site-nav {
   border-bottom: 1px solid;
+}
+
+.nav-content {
+  display: flex;
+  width: 100%;
+  max-width: 1100px;
+  min-height: 52px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  margin-inline: auto;
+  padding: 10px 1em;
+}
+
+.nav-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
+.site-header {
+  padding: 28px 0 8px;
 }
 
 h1 {
@@ -477,5 +498,10 @@ code {
   .chart-note,
   .chart-label {
     font-size: 16px;
+  }
+
+  .nav-content {
+    align-items: flex-start;
+    flex-direction: column;
   }
 }
