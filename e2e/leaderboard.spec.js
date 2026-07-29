@@ -227,6 +227,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-point-group")).toHaveCount(4);
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(4);
 
+  const hoveredGroup = await page.locator(".chart-point-group").first()
+    .getAttribute("data-chart-group");
+  const persistentLabel = page.locator(
+    `.chart-label.chart-series[data-chart-group="${hoveredGroup}"]`,
+  );
+  await expect(persistentLabel).toHaveCount(1);
+  const persistentLabelPosition = await persistentLabel.evaluate((label) => ({
+    x: label.getAttribute("x"),
+    y: label.getAttribute("y"),
+  }));
   await page.locator(".chart-point-group").first().hover();
   await expect(page.locator("#chart-detail"))
     .toContainText("relative to the overall eligible leader");
@@ -235,6 +245,14 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
   await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("HIGH");
+  await expect(page.locator(".chart-hover-label-text")).toHaveAttribute(
+    "x",
+    persistentLabelPosition.x,
+  );
+  await expect(page.locator(".chart-hover-label-text")).toHaveAttribute(
+    "y",
+    persistentLabelPosition.y,
+  );
   await expect(page.locator(".chart-hover-label-text")).toHaveCSS("fill", "rgb(180, 83, 9)");
   await expect(page.locator(".chart-hover-label-connector")).toHaveCSS(
     "stroke",

@@ -492,10 +492,20 @@ function showChartDetails(configuration, marker, groupId) {
   const xNumber = Number(xPosition);
   const yNumber = Number(yPosition);
   const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-  const anchor = xNumber > 480 ? "end" : "start";
-  const labelX = anchor === "end" ? xNumber - 18 : xNumber + 18;
-  const labelBelowPoint = yNumber < 70;
-  const labelY = labelBelowPoint ? yNumber + 24 : yNumber - 22;
+  const persistentLabel = [...elements.chart.querySelectorAll(
+    ".chart-label.chart-series",
+  )].find((candidate) => candidate.dataset.chartGroup === groupId);
+  const anchor = persistentLabel?.getAttribute("text-anchor")
+    ?? (xNumber > 480 ? "end" : "start");
+  const labelX = Number(
+    persistentLabel?.getAttribute("x")
+      ?? (anchor === "end" ? xNumber - 18 : xNumber + 18),
+  );
+  const labelY = Number(
+    persistentLabel?.getAttribute("y")
+      ?? (yNumber < 70 ? yNumber + 24 : yNumber - 22),
+  );
+  const labelBelowPoint = labelY > yNumber;
   callout.setAttribute(
     "class",
     `chart-hover-label chart-series-${seriesIndex}`,
