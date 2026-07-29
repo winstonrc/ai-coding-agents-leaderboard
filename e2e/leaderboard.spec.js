@@ -102,7 +102,11 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
   await expect(page.locator(".chart-point")).toHaveCount(3);
   await expect(page.locator(".chart-point title").first()).toHaveText("model-alpha [high]");
-  await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↗");
+  await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↖");
+  const costTickPositions = await page.locator(".chart-tick").evaluateAll((ticks) => (
+    ticks.slice(0, 6).map((tick) => Number(tick.getAttribute("x")))
+  ));
+  expect(costTickPositions).toEqual([...costTickPositions].sort((left, right) => left - right));
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);
   await expect(page.getByText("Partial task coverage")).toBeVisible();
   await expect(page.locator("#content-hash")).not.toHaveText("—");

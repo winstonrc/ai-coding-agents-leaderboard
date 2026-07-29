@@ -454,7 +454,7 @@ function renderChart(configurations) {
     1,
     Math.max(0.8, Math.ceil(Math.max(...finite.map((configuration) => configuration.passAt1)) * 10) / 10),
   );
-  const x = (cost) => margin.left + width * (1 - cost / maximumCost);
+  const x = (cost) => margin.left + width * cost / maximumCost;
   const y = (passAt1) => margin.top + height * (1 - passAt1 / maximumPass);
 
   const grid = createSvgElement("g");
@@ -518,12 +518,12 @@ function renderChart(configurations) {
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
-    x: margin.left + width - 8,
+    x: margin.left + 8,
     y: margin.top + 18,
-    "text-anchor": "end",
+    "text-anchor": "start",
     class: "chart-efficiency-label",
   });
-  efficiencyLabel.textContent = "most efficient ↗";
+  efficiencyLabel.textContent = "most efficient ↖";
   elements.chart.append(efficiencyLabel);
 
   const groups = new Map();
