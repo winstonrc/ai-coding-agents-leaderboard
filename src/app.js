@@ -486,50 +486,21 @@ function showChartDetails(configuration, marker, groupId) {
   timeLabel.setAttribute("y", String(Number(yPosition) + 4));
   timeLabel.textContent = formatDuration(configuration.expectedTimeMinutes);
 
-  const callout = elements.chart.querySelector(".chart-hover-label");
-  const connector = callout.querySelector("line");
-  const label = callout.querySelector("text");
-  const xNumber = Number(xPosition);
-  const yNumber = Number(yPosition);
-  const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-  const persistentLabel = [...elements.chart.querySelectorAll(
-    ".chart-label.chart-series",
-  )].find((candidate) => candidate.dataset.chartGroup === groupId);
-  const anchor = persistentLabel?.getAttribute("text-anchor")
-    ?? (xNumber > 480 ? "end" : "start");
-  const labelX = Number(
-    persistentLabel?.getAttribute("x")
-      ?? (anchor === "end" ? xNumber - 18 : xNumber + 18),
-  );
-  const labelY = Number(
-    persistentLabel?.getAttribute("y")
-      ?? (yNumber < 70 ? yNumber + 24 : yNumber - 22),
-  );
-  const labelBelowPoint = labelY > yNumber;
-  callout.setAttribute(
-    "class",
-    `chart-hover-label chart-series-${seriesIndex}`,
-  );
-  connector.setAttribute("x1", xPosition);
-  connector.setAttribute("y1", yPosition);
-  connector.setAttribute("x2", String(anchor === "end" ? labelX + 4 : labelX - 4));
-  connector.setAttribute("y2", String(labelBelowPoint ? labelY - 12 : labelY + 5));
-  label.setAttribute("x", String(labelX));
-  label.setAttribute("y", String(labelY));
-  label.setAttribute("text-anchor", anchor);
-  const [modelName, effort] = label.querySelectorAll("tspan");
-  modelName.setAttribute("x", String(labelX));
-  modelName.textContent = configuration.model;
-  effort.setAttribute("x", String(labelX));
-  effort.textContent = (configuration.reasoningEffort ?? "default").toUpperCase();
-  callout.setAttribute("visibility", "visible");
+  elements.chart.querySelectorAll(".chart-point-label.is-active").forEach((label) => {
+    label.classList.remove("is-active");
+  });
+  [...elements.chart.querySelectorAll(".chart-point-label")]
+    .find((label) => label.dataset.config === configuration.config)
+    ?.classList.add("is-active");
 }
 
 function hideChartDetails() {
   elements.chartDetail.textContent = "";
   elements.chart.classList.remove("is-interacting");
   elements.chart.querySelector(".chart-crosshair")?.setAttribute("visibility", "hidden");
-  elements.chart.querySelector(".chart-hover-label")?.setAttribute("visibility", "hidden");
+  elements.chart.querySelectorAll(".chart-point-label.is-active").forEach((label) => {
+    label.classList.remove("is-active");
+  });
   elements.chart.querySelectorAll(".chart-series").forEach((element) => {
     element.classList.remove("is-muted");
   });
@@ -835,66 +806,55 @@ function renderChart(configurations) {
       25,
     ),
   ];
+  const defaultLabelPositions = new Map(
+    labels.map((entry) => [entry.representative.config, entry]),
+  );
 
-  for (const entry of labels) {
-    const {
-      key,
-      representative,
-      xPosition,
-      yPosition,
-      anchor,
-    } = entry;
+  for (const configuration of finite) {
+    const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
+    const xPosition = x(configuration.expectedCostUsd);
+    const yPosition = y(configuration.expectedTimeMinutes);
+    const defaultPosition = defaultLabelPositions.get(configuration.config);
+    const anchor = defaultPosition?.anchor
+      ?? (xPosition > margin.left + width * 0.5 ? "end" : "start");
     const labelX = anchor === "end" ? xPosition - 12 : xPosition + 12;
-    elements.chart.append(createSvgElement("line", {
+    const labelY = defaultPosition?.y
+      ?? (yPosition < margin.top + 30 ? yPosition + 24 : yPosition - 22);
+    const labelBelowPoint = labelY > yPosition;
+    const pointLabel = createSvgElement("g", {
+      class: `chart-point-label chart-series chart-series-${seriesIndex}`,
+      "data-chart-group": groupId,
+      "data-config": configuration.config,
+      "data-default-visible": Boolean(defaultPosition),
+      "aria-hidden": "true",
+    });
+    pointLabel.append(createSvgElement("line", {
       x1: xPosition,
       y1: yPosition,
       x2: anchor === "end" ? labelX + 3 : labelX - 3,
-      y2: entry.y - 4,
-      class: `chart-label-connector chart-series chart-series-${seriesIndex}`,
-      "data-chart-group": groupId,
+      y2: labelBelowPoint ? labelY - 12 : labelY + 5,
+      class: "chart-label-connector",
     }));
     const label = createSvgElement("text", {
       x: labelX,
-      y: entry.y,
+      y: labelY,
       "text-anchor": anchor,
-      class: `chart-label chart-series chart-series-${seriesIndex}`,
-      "data-chart-group": groupId,
+      class: "chart-label",
     });
     const modelName = createSvgElement("tspan", { x: label.getAttribute("x") });
-    modelName.textContent = representative.model;
+    modelName.textContent = configuration.model;
     const effort = createSvgElement("tspan", {
       x: label.getAttribute("x"),
       dy: 12,
       class: "chart-effort-label",
     });
-    effort.textContent = (representative.reasoningEffort ?? "default").toUpperCase();
+    effort.textContent = (configuration.reasoningEffort ?? "default").toUpperCase();
     label.append(modelName, effort);
-    elements.chart.append(label);
+    pointLabel.append(label);
+    elements.chart.append(pointLabel);
   }
-
-  const hoverLabel = createSvgElement("g", {
-    class: "chart-hover-label",
-    visibility: "hidden",
-  });
-  const hoverText = createSvgElement("text", {
-    class: "chart-label chart-hover-label-text",
-  });
-  hoverText.append(
-    createSvgElement("tspan"),
-    createSvgElement("tspan", {
-      dy: 12,
-      class: "chart-effort-label",
-    }),
-  );
-  hoverLabel.append(
-    createSvgElement("line", {
-      class: "chart-label-connector chart-hover-label-connector",
-    }),
-    hoverText,
-  );
-  elements.chart.append(hoverLabel);
 }
 
 function renderProvenance() {

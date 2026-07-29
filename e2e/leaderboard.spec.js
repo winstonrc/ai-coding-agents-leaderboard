@@ -227,13 +227,14 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-point-group")).toHaveCount(4);
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(4);
 
-  const hoveredGroup = await page.locator(".chart-point-group").first()
-    .getAttribute("data-chart-group");
-  const persistentLabel = page.locator(
-    `.chart-label.chart-series[data-chart-group="${hoveredGroup}"]`,
+  const hoveredConfig = await page.locator(".chart-point-group").first()
+    .getAttribute("data-config");
+  const pointLabel = page.locator(
+    `.chart-point-label[data-config="${hoveredConfig}"]`,
   );
-  await expect(persistentLabel).toHaveCount(1);
-  const persistentLabelPosition = await persistentLabel.evaluate((label) => ({
+  await expect(pointLabel).toHaveCount(1);
+  await expect(pointLabel).toHaveAttribute("data-default-visible", "true");
+  const persistentLabelPosition = await pointLabel.locator("text").evaluate((label) => ({
     x: label.getAttribute("x"),
     y: label.getAttribute("y"),
   }));
@@ -242,19 +243,19 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toContainText("relative to the overall eligible leader");
   await expect(page.locator("#chart-detail")).toContainText("single-attempt success");
   await expect(page.locator("#chart-detail")).toContainText("cumulative agent time");
-  await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
-  await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
-  await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("HIGH");
-  await expect(page.locator(".chart-hover-label-text")).toHaveAttribute(
+  await expect(pointLabel).toHaveClass(/is-active/);
+  await expect(pointLabel.locator("tspan").first()).toHaveText("model-alpha");
+  await expect(pointLabel.locator("tspan").nth(1)).toHaveText("HIGH");
+  await expect(pointLabel.locator("text")).toHaveAttribute(
     "x",
     persistentLabelPosition.x,
   );
-  await expect(page.locator(".chart-hover-label-text")).toHaveAttribute(
+  await expect(pointLabel.locator("text")).toHaveAttribute(
     "y",
     persistentLabelPosition.y,
   );
-  await expect(page.locator(".chart-hover-label-text")).toHaveCSS("fill", "rgb(180, 83, 9)");
-  await expect(page.locator(".chart-hover-label-connector")).toHaveCSS(
+  await expect(pointLabel.locator("text")).toHaveCSS("fill", "rgb(180, 83, 9)");
+  await expect(pointLabel.locator("line")).toHaveCSS(
     "stroke",
     "rgb(180, 83, 9)",
   );
@@ -266,11 +267,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .not.toHaveClass(/is-muted/);
   await page.locator("#chart-heading").hover();
   await expect(page.locator("#chart-detail")).toBeEmpty();
-  await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "hidden");
+  await expect(pointLabel).not.toHaveClass(/is-active/);
   await page.locator(".chart-point-group").nth(1).focus();
   await expect(page.locator("#chart-detail")).toContainText("model-beta [medium]");
-  await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-beta");
-  await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("MEDIUM");
+  const focusedConfig = await page.locator(".chart-point-group").nth(1)
+    .getAttribute("data-config");
+  const focusedLabel = page.locator(
+    `.chart-point-label[data-config="${focusedConfig}"]`,
+  );
+  await expect(focusedLabel.locator("tspan").first()).toHaveText("model-beta");
+  await expect(focusedLabel.locator("tspan").nth(1)).toHaveText("MEDIUM");
   await expect(page.locator(".chart-point-group").first()).toHaveAttribute("role", "img");
   await expect(page.locator(".chart-point-group").first().locator(".chart-hit-target"))
     .toHaveAttribute("r", "16");
@@ -295,6 +301,44 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     expect(targetBox.height).toBeGreaterThanOrEqual(24);
   }
   expect(consoleErrors).toEqual([]);
+});
+
+test("each point owns one fixed label and interaction only changes visibility", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: [
+      row(),
+      row({
+        config: "agent-alpha-max",
+        reasoning_effort: "max",
+        pass_at_1: 0.75,
+        mean_cost_usd: 9,
+        mean_duration_seconds: 1_500,
+      }),
+    ],
+  }));
+  await page.goto("/?formula=v1");
+
+  await expect(page.locator(".chart-point-group")).toHaveCount(2);
+  await expect(page.locator(".chart-point-label")).toHaveCount(2);
+  await expect(page.locator(
+    '.chart-point-label[data-default-visible="true"]',
+  )).toHaveCount(1);
+
+  for (const config of ["agent-alpha-high", "agent-alpha-max"]) {
+    const marker = page.locator(`.chart-point-group[data-config="${config}"]`);
+    const label = page.locator(`.chart-point-label[data-config="${config}"]`);
+    const before = await label.locator("text").evaluate((element) => ({
+      x: element.getAttribute("x"),
+      y: element.getAttribute("y"),
+    }));
+
+    await marker.hover();
+    await expect(label).toHaveClass(/is-active/);
+    await expect(label.locator("text")).toHaveAttribute("x", before.x);
+    await expect(label.locator("text")).toHaveAttribute("y", before.y);
+    await page.locator("#chart-heading").hover();
+    await expect(label).not.toHaveClass(/is-active/);
+  }
 });
 
 test("shared model filter applies to the chart and table", async ({ page }) => {
