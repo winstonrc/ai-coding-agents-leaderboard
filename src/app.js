@@ -319,10 +319,10 @@ function renderModelFilter() {
 }
 
 function readPriorities() {
-  const costPerSuccess = Number(elements.costPriority.value);
+  const amortizedCostPerPass = Number(elements.costPriority.value);
   state.priorities = {
-    costPerSuccess,
-    timePerSuccess: 100 - costPerSuccess,
+    amortizedCostPerPass,
+    amortizedAgentTimePerPass: 100 - amortizedCostPerPass,
   };
   renderPriorityOutputs();
   render();
@@ -331,8 +331,8 @@ function readPriorities() {
 function renderPriorityOutputs() {
   const normalized = normalizePriorities(state.priorities);
   elements.costPriorityValue.textContent = `${
-    formatPercent(normalized.costPerSuccess, 0)
-  } cost · ${formatPercent(normalized.timePerSuccess, 0)} time`;
+    formatPercent(normalized.amortizedCostPerPass, 0)
+  } cost · ${formatPercent(normalized.amortizedAgentTimePerPass, 0)} time`;
   elements.costPriority.setAttribute(
     "aria-valuetext",
     elements.costPriorityValue.textContent,
@@ -341,8 +341,13 @@ function renderPriorityOutputs() {
 
 function primaryValue(configuration) {
   if (state.sortBy === "performance") return configuration.passAt1;
-  if (state.sortBy === "cost") return configuration.expectedCostUsd;
-  if (state.sortBy === "speed") return configuration.expectedTimeMinutes;
+  if (state.sortBy === "persistence") {
+    return configuration.runs === 4 ? configuration.passAt4 : null;
+  }
+  if (state.sortBy === "cost") return configuration.amortizedCostPerPassUsd;
+  if (state.sortBy === "speed") {
+    return configuration.amortizedAgentTimePerPassMinutes;
+  }
   return configuration.score;
 }
 
@@ -384,7 +389,10 @@ function renderTable(configurations) {
       row.classList.add("is-partial");
     }
 
-    appendText(row, "td", String(displayedRank), "rank-cell");
+    const rankText = state.sortBy === "persistence" && configuration.runs !== 4
+      ? "—"
+      : String(displayedRank);
+    appendText(row, "td", rankText, "rank-cell");
 
     const nameCell = document.createElement("td");
     appendText(nameCell, "strong", configurationName(configuration), "configuration-name");
@@ -425,8 +433,30 @@ function renderTable(configurations) {
       ? `${formatPercent(configuration.passAt1)} ±${formatPercent(configuration.ciHalf)}`
       : formatPercent(configuration.passAt1);
     appendText(row, "td", performanceText, "numeric");
-    appendText(row, "td", formatCurrency(configuration.expectedCostUsd), "numeric");
-    appendText(row, "td", formatDuration(configuration.expectedTimeMinutes), "numeric");
+    const persistenceCell = document.createElement("td");
+    persistenceCell.className = "numeric";
+    appendText(persistenceCell, "span", formatPercent(configuration.passAt4));
+    appendText(
+      persistenceCell,
+      "span",
+      configuration.runs === 4
+        ? `${configuration.tasksPassedAny}/${configuration.tasksAttempted} tasks within 4 runs`
+        : `${configuration.runs} published runs; not comparable`,
+      "secondary-metric",
+    );
+    row.append(persistenceCell);
+    appendText(
+      row,
+      "td",
+      formatCurrency(configuration.amortizedCostPerPassUsd),
+      "numeric",
+    );
+    appendText(
+      row,
+      "td",
+      formatDuration(configuration.amortizedAgentTimePerPassMinutes),
+      "numeric",
+    );
     appendText(
       row,
       "td",
@@ -449,17 +479,19 @@ function clearChart() {
 
 function markerDetails(configuration) {
   const status = configuration.paretoEfficient
-    ? "Pareto-efficient among selected models"
-    : "Not Pareto-efficient among selected models";
+    ? "Pareto-efficient"
+    : "Not Pareto-efficient";
   return `${configurationName(configuration)} — ${
-    formatRelativeValue(configuration.relativeValue)
-  } relative to the overall eligible leader, ${
     formatPercent(configuration.passAt1)
-  } single-attempt success, ${
-    formatCurrency(configuration.expectedCostUsd)
-  } expected cost per success, ${
-    formatDuration(configuration.expectedTimeMinutes)
-  } expected cumulative agent time per success. ${status}.`;
+  } single-attempt · ${
+    formatPercent(configuration.passAt4)
+  } over ${configuration.runs} runs · ${
+    formatCurrency(configuration.amortizedCostPerPassUsd)
+  } amortized cost · ${
+    formatDuration(configuration.amortizedAgentTimePerPassMinutes)
+  } amortized time · ${
+    formatRelativeValue(configuration.relativeValue)
+  } value · ${status}.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {
@@ -481,10 +513,12 @@ function showChartDetails(configuration, marker, groupId) {
   horizontal.setAttribute("y2", yPosition);
   const costLabel = crosshair.querySelector(".chart-crosshair-cost");
   costLabel.setAttribute("x", xPosition);
-  costLabel.textContent = formatCurrency(configuration.expectedCostUsd);
+  costLabel.textContent = formatCurrency(configuration.amortizedCostPerPassUsd);
   const timeLabel = crosshair.querySelector(".chart-crosshair-time");
   timeLabel.setAttribute("y", String(Number(yPosition) + 4));
-  timeLabel.textContent = formatDuration(configuration.expectedTimeMinutes);
+  timeLabel.textContent = formatDuration(
+    configuration.amortizedAgentTimePerPassMinutes,
+  );
 
   elements.chart.querySelectorAll(".chart-point-label.is-active").forEach((label) => {
     label.classList.remove("is-active");
@@ -507,8 +541,8 @@ function hideChartDetails() {
 }
 
 function isFiniteChartConfiguration(configuration) {
-  return Number.isFinite(configuration.expectedCostUsd)
-    && Number.isFinite(configuration.expectedTimeMinutes)
+  return Number.isFinite(configuration.amortizedCostPerPassUsd)
+    && Number.isFinite(configuration.amortizedAgentTimePerPassMinutes)
     && Number.isFinite(configuration.score)
     && Number.isFinite(configuration.relativeValue);
 }
@@ -560,10 +594,12 @@ function renderChart(configurations) {
   const width = 960 - margin.left - margin.right;
   const height = 430 - margin.top - margin.bottom;
   const maximumCost = Math.max(
-    ...finite.map((configuration) => configuration.expectedCostUsd),
+    ...finite.map((configuration) => configuration.amortizedCostPerPassUsd),
   );
   const maximumTime = Math.max(
-    ...finite.map((configuration) => configuration.expectedTimeMinutes),
+    ...finite.map(
+      (configuration) => configuration.amortizedAgentTimePerPassMinutes,
+    ),
   );
   const costStep = niceStep(maximumCost);
   const timeStep = niceStep(maximumTime);
@@ -625,7 +661,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  xLabel.textContent = "Expected cost per success";
+  xLabel.textContent = "Amortized cost per pass";
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
@@ -635,7 +671,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Expected time per success";
+  yLabel.textContent = "Amortized agent time per pass";
   elements.chart.append(yLabel);
 
   const groups = new Map();
@@ -690,8 +726,8 @@ function renderChart(configurations) {
       const path = sorted
         .map((configuration, index) => {
           const command = index === 0 ? "M" : "L";
-          return `${command}${x(configuration.expectedCostUsd)},${
-            y(configuration.expectedTimeMinutes)
+          return `${command}${x(configuration.amortizedCostPerPassUsd)},${
+            y(configuration.amortizedAgentTimePerPassMinutes)
           }`;
         })
         .join(" ");
@@ -708,8 +744,8 @@ function renderChart(configurations) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-    const xPosition = x(configuration.expectedCostUsd);
-    const yPosition = y(configuration.expectedTimeMinutes);
+    const xPosition = x(configuration.amortizedCostPerPassUsd);
+    const yPosition = y(configuration.amortizedAgentTimePerPassMinutes);
     const visibleMarker = configuration.paretoEfficient
       ? createSvgElement("rect", {
         x: xPosition - 5,
@@ -770,8 +806,8 @@ function renderChart(configurations) {
   const labelGroups = { start: [], end: [] };
   for (const [key, group] of sortedGroups) {
     const representative = group[Math.floor((group.length - 1) / 2)];
-    const xPosition = x(representative.expectedCostUsd);
-    const yPosition = y(representative.expectedTimeMinutes);
+    const xPosition = x(representative.amortizedCostPerPassUsd);
+    const yPosition = y(representative.amortizedAgentTimePerPassMinutes);
     const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
     labelGroups[anchor].push({
       key,
@@ -805,8 +841,8 @@ function renderChart(configurations) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-    const xPosition = x(configuration.expectedCostUsd);
-    const yPosition = y(configuration.expectedTimeMinutes);
+    const xPosition = x(configuration.amortizedCostPerPassUsd);
+    const yPosition = y(configuration.amortizedAgentTimePerPassMinutes);
     const defaultPosition = defaultLabelPositions.get(configuration.config);
     const anchor = defaultPosition?.anchor
       ?? (xPosition > margin.left + width * 0.5 ? "end" : "start");

@@ -45,6 +45,7 @@ try {
     stylesheet.addEventListener("error", () => reject(new Error("Preview stylesheet failed.")));
     document.head.append(stylesheet);
   }));
+  await page.evaluate(() => window.scrollTo(0, 0));
   await page.screenshot({
     path: path.join(root, "dist", "og-image.png"),
   });

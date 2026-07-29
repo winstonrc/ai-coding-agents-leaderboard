@@ -6,17 +6,23 @@ const sourceUrl = "**/data/leaderboard-v1.1.json";
 const metadataUrl = "**/data/feed-metadata.json";
 
 function row(overrides = {}) {
+  const tasksAttempted = overrides.n_tasks_attempted ?? 100;
+  const runs = overrides.n_runs ?? 4;
+  const tasksPassedAny = overrides.n_tasks_passed_any
+    ?? Math.round(tasksAttempted * 0.8);
   return {
     config: "agent-alpha-high",
     harness: "agent-alpha",
     model: "model-alpha",
     reasoning_effort: "high",
     pass_at_1: 0.7,
+    pass_at_4: overrides.pass_at_4 ?? tasksPassedAny / tasksAttempted,
     mean_cost_usd: 7,
     mean_duration_seconds: 1_200,
-    n_tasks_attempted: 100,
-    n_attempted: 100,
-    n_runs: 2,
+    n_tasks_attempted: tasksAttempted,
+    n_tasks_passed_any: tasksPassedAny,
+    n_attempted: overrides.n_attempted ?? tasksAttempted * runs,
+    n_runs: runs,
     ...overrides,
   };
 }
@@ -97,16 +103,17 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     { exact: true },
   )).toBeVisible();
   await expect(page.locator(".chart-axis-label").first())
-    .toHaveText("Expected cost per success");
+    .toHaveText("Amortized cost per pass");
   await expect(page.locator(".chart-axis-label").last())
-    .toHaveText("Expected time per success");
+    .toHaveText("Amortized agent time per pass");
   await expect(page.locator("thead th")).toHaveText([
     "Rank",
     "Configuration",
     "Relative value",
     "Success rate",
-    "Cost per success",
-    "Time per success",
+    "Repeated-run success",
+    "Amortized cost",
+    "Amortized time",
     "Task coverage",
   ]);
   await expect(page.getByRole("columnheader", {
@@ -128,8 +135,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     null,
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
     "Point-estimate single-attempt success rate (Pass@1).",
-    "Expected cost of the attempts required to produce a successful result.",
-    "Expected cumulative agent time, including retries, required to produce a successful result.",
+    "Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable.",
+    "Mean cost per scored attempt divided by the point-estimate single-attempt success rate.",
+    "Mean agent time per scored attempt divided by the point-estimate single-attempt success rate.",
     "Tasks attempted divided by the complete task set.",
   ]);
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
@@ -142,11 +150,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toHaveCount(0);
   await expect(page.getByRole("navigation").getByRole("link", { name: "Methodology" }))
     .toHaveAttribute("href", "./methodology/v1.html");
-  await expect(page.getByRole("navigation").getByRole("link", { name: "GitHub" }))
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Source" }))
     .toHaveAttribute(
       "href",
       "https://github.com/winstonrc/ai-coding-agents-leaderboard",
     );
+  await expect(page.getByRole("navigation").getByRole("link", { name: "Source" }))
+    .toHaveAttribute("rel", "noreferrer");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
     "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png",
@@ -157,7 +167,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   );
   await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
     "content",
-    "AI coding agents expected cost and cumulative time per success chart",
+    "AI coding agents amortized cost and agent time per pass chart",
   );
   await expect(page.locator(".chart-point-group")).toHaveCount(3);
   expect(await page.locator(".chart-section").evaluate((chart) => (
@@ -237,6 +247,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     [...costTickPositions].sort((left, right) => left - right),
   );
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(3);
+  await expect(page.locator("#leaderboard-body tr").first())
+    .toContainText("80.0%");
+  await expect(page.locator("#leaderboard-body tr").first())
+    .toContainText("within 4 runs");
   await expect(page.locator("#leaderboard-body tr").first().locator(".relative-value"))
     .toHaveText("1.00×");
   await expect(page.locator("#leaderboard-body")).not.toContainText("Formula v1 index");
@@ -289,11 +303,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     x: label.getAttribute("x"),
     y: label.getAttribute("y"),
   }));
+  const controlsTopBeforeHover = await page.locator(".controls").evaluate(
+    (controls) => controls.getBoundingClientRect().top + window.scrollY,
+  );
   await page.locator(".chart-point-group").first().hover();
   await expect(page.locator("#chart-detail"))
-    .toContainText("relative to the overall eligible leader");
-  await expect(page.locator("#chart-detail")).toContainText("single-attempt success");
-  await expect(page.locator("#chart-detail")).toContainText("cumulative agent time");
+    .toContainText("single-attempt");
+  await expect(page.locator("#chart-detail")).toContainText("over 4 runs");
+  await expect(page.locator("#chart-detail")).toContainText("amortized cost");
+  await expect(page.locator("#chart-detail")).toContainText("amortized time");
+  await expect(page.locator("#chart-detail")).toContainText("value");
   await expect(pointLabel).toHaveClass(/is-active/);
   await expect(pointLabel.locator("tspan").first()).toHaveText("model-alpha");
   await expect(pointLabel.locator("tspan").nth(1)).toHaveText("HIGH");
@@ -316,6 +335,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
   await expect(page.locator(".chart-point-group").first().locator(".chart-point"))
     .not.toHaveClass(/is-muted/);
+  expect(await page.locator(".controls").evaluate(
+    (controls) => controls.getBoundingClientRect().top + window.scrollY,
+  )).toBe(controlsTopBeforeHover);
   await page.locator("#chart-heading").hover();
   await expect(page.locator("#chart-detail")).toBeEmpty();
   await expect(pointLabel).not.toHaveClass(/is-active/);
@@ -417,6 +439,44 @@ test("shared model filter applies to the chart and table", async ({ page }) => {
   await page.getByRole("button", { name: "Select all" }).click();
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator(".chart-point-group")).toHaveCount(3);
+});
+
+test("repeated-run sorting leaves non-four-run rows unranked", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: [
+      row({
+        config: "four-run-lower",
+        model: "four-run-lower",
+        pass_at_4: 0.7,
+        n_tasks_passed_any: 70,
+      }),
+      row({
+        config: "four-run-higher",
+        model: "four-run-higher",
+        pass_at_4: 0.9,
+        n_tasks_passed_any: 90,
+      }),
+      row({
+        config: "two-run",
+        model: "two-run",
+        pass_at_4: 0.95,
+        n_tasks_passed_any: 95,
+        n_attempted: 200,
+        n_runs: 2,
+      }),
+    ],
+  }));
+  await page.goto("/");
+  await page.locator("#sort-by").selectOption("persistence");
+
+  await expect(page.locator("#leaderboard-body .configuration-name")).toHaveText([
+    "four-run-higher [high]",
+    "four-run-lower [high]",
+    "two-run [high]",
+  ]);
+  await expect(page.locator(".rank-cell")).toHaveText(["1", "2", "—"]);
+  await expect(page.locator("#leaderboard-body tr").last())
+    .toContainText("2 published runs; not comparable");
 });
 
 test("Pareto status ignores configurations below the success floor", async ({ page }) => {

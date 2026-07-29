@@ -21,7 +21,10 @@
         <a href="../"><strong>AI Coding Agents</strong></a>
         <div class="nav-links">
           <a href="./v1.html" aria-current="page">Methodology</a>
-          <a href="https://github.com/winstonrc/ai-coding-agents-leaderboard">GitHub</a>
+          <a
+            href="https://github.com/winstonrc/ai-coding-agents-leaderboard"
+            rel="noreferrer"
+          >Source</a>
         </div>
       </div>
     </nav>
@@ -47,13 +50,13 @@
           <var>p</var> is Pass@1 (single-attempt success rate), <var>c</var> is
           mean cost in dollars per attempt, and <var>m</var> is mean duration in
           minutes per attempt. The two nonnegative priorities are normalized to
-          sum to one. The defaults are 60% cost per success and 40% cumulative
-          agent time per success.
+          sum to one. The defaults are 60% amortized cost per pass and 40%
+          amortized agent time per pass.
         </p>
         <p>
-          The anchors describe an index value of 100: $10 expected cost per success
-          and 40 minutes expected cumulative agent time per success. Anchors affect
-          the displayed scale, not ordering.
+          The anchors describe an index value of 100: $10 amortized cost per pass
+          and 40 minutes amortized agent time per pass. Anchors affect the displayed
+          scale, not ordering.
         </p>
         <p>
           The leaderboard considers only configurations meeting the selected
@@ -80,19 +83,37 @@
       <section>
         <h2>What the priorities mean</h2>
         <p>
-          Cost per success is <var>c / p</var>; expected cumulative agent time per
-          success is <var>m / p</var>. Expanding the formula gives:
+          Amortized cost per pass is <var>c / p</var>; amortized agent time per pass
+          is <var>m / p</var>. These divide aggregate per-attempt averages by the
+          aggregate single-attempt pass rate. Expanding the formula gives:
         </p>
         <div class="formula" aria-label="Expanded behavior">
           Score<sub>v1</sub> ∝ p · c<sup>−w<sub>c</sub></sup>
           · m<sup>−w<sub>t</sub></sup>
         </div>
         <p>
-          Reliability therefore has an effective elasticity of one: failure affects
-          both retry-adjusted outcomes. The 60/40 default is an editorial preference
-          that treats percentage improvements in cost as somewhat more important than
-          equal percentage improvements in cumulative time. It is not an empirically
-          calibrated optimum.
+          Reliability therefore has an effective elasticity of one: a lower pass rate
+          reduces both aggregate cost and time efficiency. The 60/40 default is an
+          editorial preference that treats percentage improvements in cost as somewhat
+          more important than equal percentage improvements in agent time. It is not
+          an empirically calibrated optimum.
+        </p>
+      </section>
+
+      <section>
+        <h2>Repeated-run success</h2>
+        <p>
+          The leaderboard also reports the source-provided share of attempted tasks
+          solved in at least one of four published runs. This helps distinguish a
+          configuration that repeatedly misses the same tasks from one that succeeds
+          on more tasks across multiple runs.
+        </p>
+        <p>
+          Repeated-run success is a supplemental persistence diagnostic. It does not
+          affect Formula v1 or Pareto status, because the aggregate feed does not
+          describe a sequential policy that stops after success or the cost and time
+          consumed before each task first passes. Rows published with a run count other
+          than four remain visible but are not compared in the repeated-run sort.
         </p>
       </section>
 
@@ -104,12 +125,12 @@
           the severity of a failed result.
         </p>
         <p>
-          Retry-adjusted cost and cumulative time assume comparable sequential
-          independent attempts and detectable success. They are not wall-clock latency
-          estimates for parallel retries. Correlated or deterministic failures can
-          make them optimistic. Upstream exclusions can also produce slightly different
-          task coverage between configurations; the leaderboard keeps those
-          configurations rankable and displays their coverage.
+          Amortized cost and agent time describe aggregate benchmark throughput. They
+          do not estimate the cost, time, or wall-clock latency of retrying a task until
+          success. Correlated or deterministic failures are visible only indirectly
+          through the repeated-run diagnostic. Upstream exclusions can also produce
+          slightly different task coverage between configurations; the leaderboard
+          keeps those configurations rankable and displays their coverage.
         </p>
       </section>
 
@@ -117,9 +138,9 @@
         <h2>Exceptional values</h2>
         <ul>
           <li>
-            Pass@1 of zero receives a score of zero and infinite retry-adjusted cost
-            and time. It remains in an unfiltered table but is omitted from the finite
-            plot.
+            Pass@1 of zero receives a score of zero and infinite amortized cost and
+            time per pass. It remains in an unfiltered table but is omitted from the
+            finite plot.
           </li>
           <li>
             Nonpositive or nonfinite mean cost or duration is unpriced and excluded
@@ -136,8 +157,8 @@
         <h2>Pareto frontier</h2>
         <p>
           A configuration is point-estimate Pareto-efficient when no other rankable
-          configuration has at most as much expected cost per success and at most as
-          much expected cumulative time per success—with at least one strict
+          configuration has at most as much amortized cost per pass and at most as
+          much amortized agent time per pass—with at least one strict
           improvement. This is not statistical dominance.
         </p>
         <p>

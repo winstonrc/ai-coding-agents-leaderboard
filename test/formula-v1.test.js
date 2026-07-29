@@ -4,9 +4,9 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  amortizedAgentTimePerPassMinutes,
+  amortizedCostPerPassUsd,
   dominates,
-  expectedCostUsd,
-  expectedTimeMinutes,
   normalizePriorities,
   rankConfigurations,
   scoreV1,
@@ -33,30 +33,56 @@ test("single-outcome priorities rank only by the selected outcome", () => {
   });
 
   assert.ok(
-    scoreV1(slowCheap, { costPerSuccess: 100, timePerSuccess: 0 })
-      > scoreV1(fastExpensive, { costPerSuccess: 100, timePerSuccess: 0 }),
+    scoreV1(slowCheap, {
+      amortizedCostPerPass: 100,
+      amortizedAgentTimePerPass: 0,
+    })
+      > scoreV1(fastExpensive, {
+        amortizedCostPerPass: 100,
+        amortizedAgentTimePerPass: 0,
+      }),
   );
   assert.ok(
-    scoreV1(fastExpensive, { costPerSuccess: 0, timePerSuccess: 100 })
-      > scoreV1(slowCheap, { costPerSuccess: 0, timePerSuccess: 100 }),
+    scoreV1(fastExpensive, {
+      amortizedCostPerPass: 0,
+      amortizedAgentTimePerPass: 100,
+    }) > scoreV1(slowCheap, {
+      amortizedCostPerPass: 0,
+      amortizedAgentTimePerPass: 100,
+    }),
   );
 });
 
 test("priorities normalize by ratio", () => {
   assert.deepEqual(
-    normalizePriorities({ costPerSuccess: 60, timePerSuccess: 40 }),
-    normalizePriorities({ costPerSuccess: 6, timePerSuccess: 4 }),
+    normalizePriorities({
+      amortizedCostPerPass: 60,
+      amortizedAgentTimePerPass: 40,
+    }),
+    normalizePriorities({
+      amortizedCostPerPass: 6,
+      amortizedAgentTimePerPass: 4,
+    }),
   );
   assert.throws(
-    () => normalizePriorities({ costPerSuccess: 0, timePerSuccess: 0 }),
+    () => normalizePriorities({
+      amortizedCostPerPass: 0,
+      amortizedAgentTimePerPass: 0,
+    }),
     /At least one priority/,
   );
   assert.throws(
-    () => normalizePriorities({ costPerSuccess: -1, timePerSuccess: 1 }),
+    () => normalizePriorities({
+      amortizedCostPerPass: -1,
+      amortizedAgentTimePerPass: 1,
+    }),
     /finite, nonnegative/,
   );
   assert.throws(
-    () => normalizePriorities({ costPerSuccess: Infinity, timePerSuccess: 1 }),
+    () => normalizePriorities({
+      amortizedCostPerPass: Infinity,
+      amortizedAgentTimePerPass: 1,
+    }),
     /finite, nonnegative/,
   );
 });
@@ -77,8 +103,11 @@ test("Formula v1 literal regression values remain frozen", () => {
     meanDurationSeconds: 1_080,
   });
   assert.equal(scoreV1(subject).toFixed(12), "179.211716831106");
-  assert.equal(expectedCostUsd(subject).toFixed(12), "5.028985507246");
-  assert.equal(expectedTimeMinutes(subject).toFixed(12), "26.086956521739");
+  assert.equal(amortizedCostPerPassUsd(subject).toFixed(12), "5.028985507246");
+  assert.equal(
+    amortizedAgentTimePerPassMinutes(subject).toFixed(12),
+    "26.086956521739",
+  );
 });
 
 test("success rate improves both expected outcomes without a direct weight", () => {
@@ -103,13 +132,16 @@ test("zero-pass and unpriced policies are explicit", () => {
   const unpriced = configuration({ meanCostUsd: 0 });
 
   assert.equal(scoreV1(zeroPass), 0);
-  assert.equal(expectedCostUsd(zeroPass), Number.POSITIVE_INFINITY);
-  assert.equal(expectedTimeMinutes(zeroPass), Number.POSITIVE_INFINITY);
+  assert.equal(amortizedCostPerPassUsd(zeroPass), Number.POSITIVE_INFINITY);
+  assert.equal(
+    amortizedAgentTimePerPassMinutes(zeroPass),
+    Number.POSITIVE_INFINITY,
+  );
   assert.equal(scoreV1(unpriced), null);
-  assert.equal(expectedCostUsd(unpriced), null);
+  assert.equal(amortizedCostPerPassUsd(unpriced), null);
 });
 
-test("Pareto uses retry-adjusted cost and time point estimates", () => {
+test("Pareto uses amortized cost and agent time point estimates", () => {
   const efficient = configuration({ config: "efficient" });
   const dominated = configuration({
     config: "dominated",
@@ -125,4 +157,29 @@ test("Pareto uses retry-adjusted cost and time point estimates", () => {
   assert.equal(ranked.find((row) => row.config === "efficient").score, 100);
   assert.equal(ranked.find((row) => row.config === "tied").score, 100);
   assert.equal(ranked.find((row) => row.config === "partial").score, 100);
+});
+
+test("repeated-run success does not change Formula v1 or Pareto status", () => {
+  const lowerPersistence = configuration({
+    config: "lower-persistence",
+    passAt4: 0.6,
+  });
+  const higherPersistence = configuration({
+    config: "higher-persistence",
+    passAt4: 0.95,
+  });
+  const higherPersistenceDominated = configuration({
+    config: "higher-persistence-dominated",
+    passAt4: 0.95,
+    meanCostUsd: 6,
+    meanDurationSeconds: 1_500,
+  });
+  const ranked = rankConfigurations([
+    lowerPersistence,
+    higherPersistenceDominated,
+  ]);
+
+  assert.equal(scoreV1(lowerPersistence), scoreV1(higherPersistence));
+  assert.equal(ranked[0].paretoEfficient, true);
+  assert.equal(ranked[1].paretoEfficient, false);
 });

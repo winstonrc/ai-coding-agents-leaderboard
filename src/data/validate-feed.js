@@ -181,10 +181,18 @@ export function parseAndValidateFeed(text) {
     if (passAt1 < 0 || passAt1 > 1) {
       throw new FeedValidationError(`${prefix}.pass_at_1 must be between zero and one.`);
     }
+    const passAt4 = requiredNumber(row.pass_at_4, `${prefix}.pass_at_4`);
+    if (passAt4 < 0 || passAt4 > 1) {
+      throw new FeedValidationError(`${prefix}.pass_at_4 must be between zero and one.`);
+    }
 
     const tasksAttempted = requiredInteger(
       row.n_tasks_attempted,
       `${prefix}.n_tasks_attempted`,
+    );
+    const tasksPassedAny = requiredInteger(
+      row.n_tasks_passed_any,
+      `${prefix}.n_tasks_passed_any`,
     );
     const attempts = requiredInteger(row.n_attempted, `${prefix}.n_attempted`);
     const runs = requiredInteger(row.n_runs, `${prefix}.n_runs`);
@@ -202,6 +210,21 @@ export function parseAndValidateFeed(text) {
     if (runs < 1) {
       throw new FeedValidationError(`${prefix}.n_runs must be at least one.`);
     }
+    if (attempts > tasksAttempted * runs) {
+      throw new FeedValidationError(
+        `${prefix}.n_attempted must not exceed n_tasks_attempted multiplied by n_runs.`,
+      );
+    }
+    if (tasksPassedAny < 0 || tasksPassedAny > tasksAttempted) {
+      throw new FeedValidationError(
+        `${prefix}.n_tasks_passed_any must be between zero and n_tasks_attempted.`,
+      );
+    }
+    if (Math.abs(passAt4 - tasksPassedAny / tasksAttempted) > 1e-12) {
+      throw new FeedValidationError(
+        `${prefix}.pass_at_4 must equal n_tasks_passed_any divided by n_tasks_attempted.`,
+      );
+    }
 
     return {
       config,
@@ -212,12 +235,14 @@ export function parseAndValidateFeed(text) {
         ? null
         : requiredString(row.reasoning_effort, `${prefix}.reasoning_effort`),
       passAt1,
+      passAt4,
       meanCostUsd: requiredNumber(row.mean_cost_usd, `${prefix}.mean_cost_usd`),
       meanDurationSeconds: requiredNumber(
         row.mean_duration_seconds,
         `${prefix}.mean_duration_seconds`,
       ),
       tasksAttempted,
+      tasksPassedAny,
       tasksInSet,
       attempts,
       runs,

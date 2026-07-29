@@ -10,13 +10,13 @@
     >
     <meta
       name="description"
-      content="Compare AI coding agents by expected cost and cumulative time per successful result."
+      content="Compare AI coding agents by amortized cost and agent time per benchmark pass."
     >
     <meta property="og:type" content="website">
     <meta property="og:title" content="AI Coding Agents Leaderboard">
     <meta
       property="og:description"
-      content="Compare coding-agent value using expected cost and cumulative agent time per successful result."
+      content="Compare coding-agent value using amortized cost and agent time per benchmark pass."
     >
     <meta property="og:url" content="https://winstonrc.github.io/ai-coding-agents-leaderboard/">
     <meta
@@ -25,7 +25,7 @@
     >
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="AI coding agents expected cost and cumulative time per success chart">
+    <meta property="og:image:alt" content="AI coding agents amortized cost and agent time per pass chart">
     <meta name="twitter:card" content="summary_large_image">
     <meta
       name="twitter:image"
@@ -41,7 +41,10 @@
         <a href="./"><strong>AI Coding Agents</strong></a>
         <div class="nav-links">
           <a href="./methodology/v1.html">Methodology</a>
-          <a href="https://github.com/winstonrc/ai-coding-agents-leaderboard">GitHub</a>
+          <a
+            href="https://github.com/winstonrc/ai-coding-agents-leaderboard"
+            rel="noreferrer"
+          >Source</a>
         </div>
       </div>
     </nav>
@@ -50,8 +53,8 @@
       <div class="page-width">
         <h1>AI Coding Agents Leaderboard</h1>
         <p class="intro">
-          Compare coding-agent value using expected cost and cumulative agent time per
-          successful result.
+          Compare coding-agent value using amortized cost and agent time per benchmark
+          pass.
         </p>
       </div>
     </header>
@@ -79,12 +82,13 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Selected configurations meeting the success floor</p>
-              <h2 id="chart-heading">Cost and cumulative time per success</h2>
+              <h2 id="chart-heading">Amortized cost and agent time per pass</h2>
             </div>
           </div>
           <p>
             The table applies the selected cost/time weighting; the chart shows the
-            underlying trade-off. The bottom-left is more efficient.
+            underlying trade-off. Repeated-run success is supplemental and does not
+            affect value or Pareto status. The bottom-left is more efficient.
           </p>
           <div class="chart-legend" aria-label="Chart legend">
             <span>Points:</span>
@@ -101,12 +105,12 @@
               class="value-chart"
               viewBox="0 0 960 430"
               role="group"
-              aria-label="Expected cost and cumulative agent time per successful result"
+              aria-label="Amortized cost and agent time per benchmark pass"
               aria-describedby="chart-description"
             >
               <desc id="chart-description">
-                Expected cost per success appears horizontally. Expected cumulative agent
-                time per success appears vertically. Points closer to the bottom-left are
+                Amortized cost per pass appears horizontally. Amortized agent time per
+                pass appears vertically. Points closer to the bottom-left are
                 more efficient. Diamonds are Pareto-efficient among selected models.
               </desc>
             </svg>
@@ -154,8 +158,9 @@
               <select id="sort-by">
                 <option value="value">Relative value</option>
                 <option value="performance">Success rate</option>
-                <option value="cost">Lowest cost per success</option>
-                <option value="speed">Fastest time per success</option>
+                <option value="persistence">Repeated-run success</option>
+                <option value="cost">Lowest amortized cost per pass</option>
+                <option value="speed">Fastest amortized agent time per pass</option>
               </select>
             </label>
             <label class="switch-control" for="pareto-only">
@@ -189,15 +194,21 @@
                   <th
                     scope="col"
                     class="numeric"
-                    aria-label="Expected cost per successful result"
-                    title="Expected cost of the attempts required to produce a successful result."
-                  >Cost per success</th>
+                    aria-label="Tasks solved within four published runs"
+                    title="Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable."
+                  >Repeated-run success</th>
                   <th
                     scope="col"
                     class="numeric"
-                    aria-label="Expected cumulative agent time per successful result"
-                    title="Expected cumulative agent time, including retries, required to produce a successful result."
-                  >Time per success</th>
+                    aria-label="Amortized cost per benchmark pass"
+                    title="Mean cost per scored attempt divided by the point-estimate single-attempt success rate."
+                  >Amortized cost</th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Amortized agent time per benchmark pass"
+                    title="Mean agent time per scored attempt divided by the point-estimate single-attempt success rate."
+                  >Amortized time</th>
                   <th
                     scope="col"
                     class="numeric"
@@ -237,8 +248,9 @@
             </div>
           </dl>
           <p>
-            Expected cost and cumulative time assume comparable sequential retries and
-            detectable success. Coverage may vary because the source excludes some errors.
+            Amortized cost and time divide aggregate attempt averages by the
+            single-attempt pass rate; they do not model stopping after a successful retry.
+            Coverage may vary because the source excludes some errors.
           </p>
           <p>
             Data published by

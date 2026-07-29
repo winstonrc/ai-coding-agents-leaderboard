@@ -47,17 +47,35 @@ test("impossible coverage fails closed", () => {
     () => parse(feed({ rows: [feedRow({ n_runs: 0 })] })),
     /n_runs/,
   );
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ n_attempted: 401 })] })),
+    /must not exceed/,
+  );
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ n_tasks_passed_any: 101 })] })),
+    /n_tasks_passed_any/,
+  );
 });
 
 test("malformed critical values fail closed", () => {
   for (const mutation of [
     { pass_at_1: 2 },
+    { pass_at_4: 2 },
+    { pass_at_4: undefined },
+    { n_tasks_passed_any: undefined },
     { mean_cost_usd: "5" },
     { mean_duration_seconds: null },
     { model: "" },
   ]) {
     assert.throws(() => parse(feed({ rows: [feedRow(mutation)] })));
   }
+});
+
+test("repeated-run fields must describe the same task count", () => {
+  assert.throws(
+    () => parse(feed({ rows: [feedRow({ pass_at_4: 0.81 })] })),
+    /must equal n_tasks_passed_any/,
+  );
 });
 
 test("malformed present optional values fail closed", () => {
@@ -169,8 +187,27 @@ test("optional values are nullable and missing values stay unavailable", () => {
 
 test("unequal valid coverage remains rankable and visible to callers", () => {
   const parsed = parse(feed({
-    rows: [feedRow({ n_tasks_attempted: 90, n_attempted: 95 })],
+    rows: [feedRow({
+      pass_at_4: 0.8,
+      n_tasks_attempted: 90,
+      n_tasks_passed_any: 72,
+      n_attempted: 95,
+    })],
   }));
   assert.equal(parsed.configurations[0].tasksAttempted, 90);
   assert.equal(parsed.configurations[0].tasksInSet, 100);
+});
+
+test("non-four-run rows remain valid and expose their published run count", () => {
+  const parsed = parse(feed({
+    rows: [feedRow({
+      pass_at_4: 0.75,
+      n_tasks_passed_any: 75,
+      n_attempted: 190,
+      n_runs: 2,
+    })],
+  }));
+  assert.equal(parsed.configurations[0].passAt4, 0.75);
+  assert.equal(parsed.configurations[0].tasksPassedAny, 75);
+  assert.equal(parsed.configurations[0].runs, 2);
 });

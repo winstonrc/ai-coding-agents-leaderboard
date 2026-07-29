@@ -3,19 +3,19 @@
 export const FORMULA_V1 = Object.freeze({
   id: "v1",
   anchors: Object.freeze({
-    expectedCostUsd: 10,
-    expectedTimeMinutes: 40,
+    amortizedCostPerPassUsd: 10,
+    amortizedAgentTimePerPassMinutes: 40,
   }),
   defaultPriorities: Object.freeze({
-    costPerSuccess: 60,
-    timePerSuccess: 40,
+    amortizedCostPerPass: 60,
+    amortizedAgentTimePerPass: 40,
   }),
 });
 
 export function normalizePriorities(priorities) {
   const values = [
-    priorities.costPerSuccess,
-    priorities.timePerSuccess,
+    priorities.amortizedCostPerPass,
+    priorities.amortizedAgentTimePerPass,
   ];
 
   if (values.some((value) => !Number.isFinite(value) || value < 0)) {
@@ -28,12 +28,12 @@ export function normalizePriorities(priorities) {
   }
 
   return {
-    costPerSuccess: priorities.costPerSuccess / total,
-    timePerSuccess: priorities.timePerSuccess / total,
+    amortizedCostPerPass: priorities.amortizedCostPerPass / total,
+    amortizedAgentTimePerPass: priorities.amortizedAgentTimePerPass / total,
   };
 }
 
-export function expectedCostUsd(configuration) {
+export function amortizedCostPerPassUsd(configuration) {
   if (configuration.passAt1 === 0) return Number.POSITIVE_INFINITY;
   if (!Number.isFinite(configuration.meanCostUsd) || configuration.meanCostUsd <= 0) {
     return null;
@@ -41,7 +41,7 @@ export function expectedCostUsd(configuration) {
   return configuration.meanCostUsd / configuration.passAt1;
 }
 
-export function expectedTimeMinutes(configuration) {
+export function amortizedAgentTimePerPassMinutes(configuration) {
   if (configuration.passAt1 === 0) return Number.POSITIVE_INFINITY;
   if (
     !Number.isFinite(configuration.meanDurationSeconds)
@@ -54,8 +54,8 @@ export function expectedTimeMinutes(configuration) {
 
 export function isRankable(configuration) {
   return configuration.passAt1 > 0
-    && Number.isFinite(expectedCostUsd(configuration))
-    && Number.isFinite(expectedTimeMinutes(configuration));
+    && Number.isFinite(amortizedCostPerPassUsd(configuration))
+    && Number.isFinite(amortizedAgentTimePerPassMinutes(configuration));
 }
 
 export function scoreV1(configuration, priorities = FORMULA_V1.defaultPriorities) {
@@ -63,17 +63,17 @@ export function scoreV1(configuration, priorities = FORMULA_V1.defaultPriorities
   if (!isRankable(configuration)) return null;
 
   const weights = normalizePriorities(priorities);
-  const expectedCost = expectedCostUsd(configuration);
-  const expectedTime = expectedTimeMinutes(configuration);
+  const amortizedCost = amortizedCostPerPassUsd(configuration);
+  const amortizedAgentTime = amortizedAgentTimePerPassMinutes(configuration);
 
   return 100
     * Math.pow(
-      FORMULA_V1.anchors.expectedCostUsd / expectedCost,
-      weights.costPerSuccess,
+      FORMULA_V1.anchors.amortizedCostPerPassUsd / amortizedCost,
+      weights.amortizedCostPerPass,
     )
     * Math.pow(
-      FORMULA_V1.anchors.expectedTimeMinutes / expectedTime,
-      weights.timePerSuccess,
+      FORMULA_V1.anchors.amortizedAgentTimePerPassMinutes / amortizedAgentTime,
+      weights.amortizedAgentTimePerPass,
     );
 }
 
@@ -85,27 +85,28 @@ export function scoreV1Expanded(
   if (!isRankable(configuration)) return null;
 
   const weights = normalizePriorities(priorities);
-  const expectedCostAnchor = FORMULA_V1.anchors.expectedCostUsd;
-  const expectedTimeAnchor = FORMULA_V1.anchors.expectedTimeMinutes;
+  const amortizedCostAnchor = FORMULA_V1.anchors.amortizedCostPerPassUsd;
+  const amortizedAgentTimeAnchor =
+    FORMULA_V1.anchors.amortizedAgentTimePerPassMinutes;
   const meanDurationMinutes = configuration.meanDurationSeconds / 60;
 
   const constant = 100
-    * Math.pow(expectedCostAnchor, weights.costPerSuccess)
-    * Math.pow(expectedTimeAnchor, weights.timePerSuccess);
+    * Math.pow(amortizedCostAnchor, weights.amortizedCostPerPass)
+    * Math.pow(amortizedAgentTimeAnchor, weights.amortizedAgentTimePerPass);
 
   return constant
     * configuration.passAt1
-    * Math.pow(configuration.meanCostUsd, -weights.costPerSuccess)
-    * Math.pow(meanDurationMinutes, -weights.timePerSuccess);
+    * Math.pow(configuration.meanCostUsd, -weights.amortizedCostPerPass)
+    * Math.pow(meanDurationMinutes, -weights.amortizedAgentTimePerPass);
 }
 
 export function dominates(candidate, configuration) {
   if (!isRankable(candidate) || !isRankable(configuration)) return false;
 
-  const candidateCost = expectedCostUsd(candidate);
-  const configurationCost = expectedCostUsd(configuration);
-  const candidateTime = expectedTimeMinutes(candidate);
-  const configurationTime = expectedTimeMinutes(configuration);
+  const candidateCost = amortizedCostPerPassUsd(candidate);
+  const configurationCost = amortizedCostPerPassUsd(configuration);
+  const candidateTime = amortizedAgentTimePerPassMinutes(candidate);
+  const configurationTime = amortizedAgentTimePerPassMinutes(configuration);
 
   const noWorse = candidateCost <= configurationCost
     && candidateTime <= configurationTime;
@@ -118,8 +119,9 @@ export function dominates(candidate, configuration) {
 export function rankConfigurations(configurations, priorities) {
   const scored = configurations.map((configuration) => ({
     ...configuration,
-    expectedCostUsd: expectedCostUsd(configuration),
-    expectedTimeMinutes: expectedTimeMinutes(configuration),
+    amortizedCostPerPassUsd: amortizedCostPerPassUsd(configuration),
+    amortizedAgentTimePerPassMinutes:
+      amortizedAgentTimePerPassMinutes(configuration),
     score: scoreV1(configuration, priorities),
   }));
 

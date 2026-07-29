@@ -429,8 +429,9 @@ input[type="range"] {
 }
 
 .chart-detail {
-  min-height: 24px;
+  height: 3rem;
   margin: 6px 0 0;
+  overflow-y: auto;
   font-size: 0.88rem;
 }
 
@@ -565,6 +566,10 @@ code {
 
   .value-chart {
     min-width: 960px;
+  }
+
+  .chart-detail {
+    height: 7.5rem;
   }
 
   .nav-content {
