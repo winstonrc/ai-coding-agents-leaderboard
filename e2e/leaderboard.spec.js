@@ -159,6 +159,11 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
   await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("HIGH");
+  await expect(page.locator(".chart-hover-label-text")).toHaveCSS("fill", "rgb(217, 119, 53)");
+  await expect(page.locator(".chart-hover-label-connector")).toHaveCSS(
+    "stroke",
+    "rgb(217, 119, 53)",
+  );
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
   await page.locator("#chart-heading").hover();

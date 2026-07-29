@@ -486,13 +486,19 @@ function showChartDetails(configuration, marker, groupId) {
   const label = callout.querySelector("text");
   const xNumber = Number(xPosition);
   const yNumber = Number(yPosition);
+  const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
   const anchor = xNumber > 480 ? "end" : "start";
-  const labelX = anchor === "end" ? xNumber - 12 : xNumber + 12;
-  const labelY = yNumber < 52 ? yNumber + 20 : yNumber - 8;
+  const labelX = anchor === "end" ? xNumber - 18 : xNumber + 18;
+  const labelBelowPoint = yNumber < 70;
+  const labelY = labelBelowPoint ? yNumber + 24 : yNumber - 22;
+  callout.setAttribute(
+    "class",
+    `chart-hover-label chart-series-${seriesIndex}`,
+  );
   connector.setAttribute("x1", xPosition);
   connector.setAttribute("y1", yPosition);
-  connector.setAttribute("x2", String(anchor === "end" ? labelX + 3 : labelX - 3));
-  connector.setAttribute("y2", String(labelY - 4));
+  connector.setAttribute("x2", String(anchor === "end" ? labelX + 4 : labelX - 4));
+  connector.setAttribute("y2", String(labelBelowPoint ? labelY - 12 : labelY + 5));
   label.setAttribute("x", String(labelX));
   label.setAttribute("y", String(labelY));
   label.setAttribute("text-anchor", anchor);
