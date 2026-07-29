@@ -141,6 +141,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-point-group title")).toHaveCount(0);
   await expect(page.locator("#value-chart")).toHaveAttribute("role", "group");
   await expect(page.locator(".chart-efficiency-label")).toHaveText("more efficient ↙");
+  await expect(page.locator(".chart-legend span")).toHaveText([
+    "Pareto-efficient",
+    "Not Pareto-efficient",
+  ]);
   const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
     labels.map((label) => ({
       paintOrder: getComputedStyle(label).paintOrder,
