@@ -180,7 +180,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-section > p").first()).toContainText(
     "The bottom-left is more efficient.",
   );
-  await expect(page.locator(".chart-legend")).toContainText("Points:");
+  await expect(page.locator(".chart-legend")).not.toContainText("Points:");
   await expect(page.locator(".chart-legend .legend-item")).toHaveText([
     "Pareto-efficient",
     "Not Pareto-efficient",
