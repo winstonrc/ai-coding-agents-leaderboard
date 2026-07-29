@@ -106,7 +106,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     Boolean(chart.compareDocumentPosition(document.querySelector(".controls"))
       & Node.DOCUMENT_POSITION_FOLLOWING)
   ))).toBe(true);
-  await expect(page.locator(".chart-point title").first()).toHaveText("model-alpha [high]");
+  await expect(page.locator(".chart-point title")).toHaveCount(0);
   await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↖");
   const costTickPositions = await page.locator(".chart-tick").evaluateAll((ticks) => (
     ticks.slice(0, 6).map((tick) => Number(tick.getAttribute("x")))
@@ -136,12 +136,18 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
 
   await page.locator(".chart-point").first().hover();
   await expect(page.locator("#chart-detail")).toContainText("expected cost per success");
+  await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
+  await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
+  await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("HIGH");
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
   await page.locator("#chart-heading").hover();
   await expect(page.locator("#chart-detail")).toBeEmpty();
+  await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "hidden");
   await page.locator(".chart-point").nth(1).focus();
   await expect(page.locator("#chart-detail")).toContainText("model-beta [medium]");
+  await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-beta");
+  await expect(page.locator(".chart-hover-label-text tspan").nth(1)).toHaveText("MEDIUM");
   await expect(page.locator(".chart-point").first()).toHaveAttribute("role", "img");
 
   expect(await page.locator("body").evaluate((body) => (

@@ -306,6 +306,15 @@ input[type="range"] {
   opacity: 0.16;
 }
 
+.value-chart.is-interacting .chart-label.chart-series,
+.value-chart.is-interacting .chart-label-connector.chart-series {
+  visibility: hidden;
+}
+
+.chart-hover-label {
+  pointer-events: none;
+}
+
 .chart-link.chart-series {
   fill: none;
   stroke: currentColor;

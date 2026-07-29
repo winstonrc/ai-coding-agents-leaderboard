@@ -451,6 +451,7 @@ function markerDetails(configuration) {
 
 function showChartDetails(configuration, marker, groupId) {
   elements.chartDetail.textContent = markerDetails(configuration);
+  elements.chart.classList.add("is-interacting");
   elements.chart.querySelectorAll(".chart-series").forEach((element) => {
     element.classList.toggle("is-muted", element.dataset.chartGroup !== groupId);
   });
@@ -471,11 +472,35 @@ function showChartDetails(configuration, marker, groupId) {
   const passLabel = crosshair.querySelector(".chart-crosshair-pass");
   passLabel.setAttribute("y", String(Number(yPosition) + 4));
   passLabel.textContent = formatPercent(configuration.passAt1);
+
+  const callout = elements.chart.querySelector(".chart-hover-label");
+  const connector = callout.querySelector("line");
+  const label = callout.querySelector("text");
+  const xNumber = Number(xPosition);
+  const yNumber = Number(yPosition);
+  const anchor = xNumber > 480 ? "end" : "start";
+  const labelX = anchor === "end" ? xNumber - 12 : xNumber + 12;
+  const labelY = yNumber < 52 ? yNumber + 20 : yNumber - 8;
+  connector.setAttribute("x1", xPosition);
+  connector.setAttribute("y1", yPosition);
+  connector.setAttribute("x2", String(anchor === "end" ? labelX + 3 : labelX - 3));
+  connector.setAttribute("y2", String(labelY - 4));
+  label.setAttribute("x", String(labelX));
+  label.setAttribute("y", String(labelY));
+  label.setAttribute("text-anchor", anchor);
+  const [modelName, effort] = label.querySelectorAll("tspan");
+  modelName.setAttribute("x", String(labelX));
+  modelName.textContent = configuration.model;
+  effort.setAttribute("x", String(labelX));
+  effort.textContent = (configuration.reasoningEffort ?? "default").toUpperCase();
+  callout.setAttribute("visibility", "visible");
 }
 
 function hideChartDetails() {
   elements.chartDetail.textContent = "";
+  elements.chart.classList.remove("is-interacting");
   elements.chart.querySelector(".chart-crosshair")?.setAttribute("visibility", "hidden");
+  elements.chart.querySelector(".chart-hover-label")?.setAttribute("visibility", "hidden");
   elements.chart.querySelectorAll(".chart-series").forEach((element) => {
     element.classList.remove("is-muted");
   });
@@ -699,9 +724,6 @@ function renderChart(configurations) {
     marker.setAttribute("tabindex", "0");
     marker.setAttribute("role", "img");
     marker.setAttribute("aria-label", markerDetails(configuration));
-    const markerTitle = createSvgElement("title");
-    markerTitle.textContent = configurationName(configuration);
-    marker.append(markerTitle);
     marker.addEventListener(
       "mouseenter",
       () => showChartDetails(configuration, marker, groupId),
@@ -783,6 +805,28 @@ function renderChart(configurations) {
     label.append(modelName, effort);
     elements.chart.append(label);
   }
+
+  const hoverLabel = createSvgElement("g", {
+    class: "chart-hover-label",
+    visibility: "hidden",
+  });
+  const hoverText = createSvgElement("text", {
+    class: "chart-label chart-hover-label-text",
+  });
+  hoverText.append(
+    createSvgElement("tspan"),
+    createSvgElement("tspan", {
+      dy: 12,
+      class: "chart-effort-label",
+    }),
+  );
+  hoverLabel.append(
+    createSvgElement("line", {
+      class: "chart-label-connector chart-hover-label-connector",
+    }),
+    hoverText,
+  );
+  elements.chart.append(hoverLabel);
 }
 
 function renderProvenance() {
