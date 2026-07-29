@@ -116,6 +116,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#chart-detail")).toContainText("expected cost per success");
   await page.locator(".chart-point").nth(1).focus();
   await expect(page.locator("#chart-detail")).toContainText("model-beta [medium]");
+  await expect(page.locator(".chart-point").first()).toHaveAttribute("role", "img");
 
   expect(await page.locator("body").evaluate((body) => (
     body.scrollWidth <= document.documentElement.clientWidth
@@ -127,6 +128,24 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#time-priority")).toHaveValue("10");
   await expect(page.locator("#time-priority-value")).toHaveText("100%");
   expect(consoleErrors).toEqual([]);
+});
+
+test("chart count excludes zero-pass configurations omitted from the plot", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: [
+      row(),
+      row({
+        config: "zero-pass",
+        model: "zero-pass",
+        pass_at_1: 0,
+      }),
+    ],
+  }));
+  await page.goto("/");
+  await page.locator("#performance-floor").fill("0");
+
+  await expect(page.locator(".chart-point")).toHaveCount(1);
+  await expect(page.locator("#visible-count")).toContainText("Chart 1");
 });
 
 test("equal scores remain tied with configuration ID as fallback", async ({ page }) => {

@@ -6,6 +6,7 @@ import test from "node:test";
 import {
   MAX_RESPONSE_BYTES,
   parseAndValidateFeed,
+  readBoundedResponseText,
 } from "../src/data/validate-feed.js";
 import { feed, feedRow } from "./fixtures.js";
 
@@ -55,6 +56,48 @@ test("malformed critical values fail closed", () => {
   ]) {
     assert.throws(() => parse(feed({ rows: [feedRow(mutation)] })));
   }
+});
+
+test("malformed present optional values fail closed", () => {
+  for (const mutation of [
+    { ci_half: "invalid" },
+    { mean_output_tokens: "invalid" },
+    { note: 123 },
+  ]) {
+    assert.throws(() => parse(feed({ rows: [feedRow(mutation)] })));
+  }
+});
+
+test("generated_at must be a valid ISO 8601 timestamp", () => {
+  for (const generatedAt of ["0", "July 25, 2026", "2026-02-30T12:00:00Z"]) {
+    assert.throws(
+      () => parse(feed({ generated_at: generatedAt })),
+      /generated_at/,
+    );
+  }
+  assert.equal(
+    parse(feed({ generated_at: "2026-07-25T12:00:00.123456+00:00" })).generatedAt,
+    "2026-07-25T12:00:00.123456+00:00",
+  );
+});
+
+test("response streaming stops after the byte limit", async () => {
+  let cancelled = false;
+  const chunk = new Uint8Array(MAX_RESPONSE_BYTES / 2 + 1);
+  const body = new ReadableStream({
+    pull(controller) {
+      controller.enqueue(chunk);
+    },
+    cancel() {
+      cancelled = true;
+    },
+  });
+
+  await assert.rejects(
+    () => readBoundedResponseText(new Response(body)),
+    /Response exceeds/,
+  );
+  assert.equal(cancelled, true);
 });
 
 test("oversized responses and excessive rows fail closed", () => {

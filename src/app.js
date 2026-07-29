@@ -6,6 +6,7 @@ import {
   MAX_RESPONSE_BYTES,
   SOURCE_URL,
   parseAndValidateFeed,
+  readBoundedResponseText,
 } from "./data/validate-feed.js";
 import {
   FORMULA_V1,
@@ -188,7 +189,7 @@ async function fetchFeed(attemptedAt) {
       throw new FeedValidationError("Response content type is not JSON.");
     }
 
-    const text = await response.text();
+    const text = await readBoundedResponseText(response);
     const feed = parseAndValidateFeed(text);
     return {
       feed,
@@ -387,13 +388,15 @@ function hideChartTooltip() {
   elements.chartTooltip.hidden = true;
 }
 
+function isFiniteChartConfiguration(configuration) {
+  return Number.isFinite(configuration.expectedCostUsd)
+    && Number.isFinite(configuration.expectedTimeMinutes)
+    && Number.isFinite(configuration.score);
+}
+
 function renderChart(configurations) {
   clearChart();
-  const finite = configurations.filter(
-    (configuration) => Number.isFinite(configuration.expectedCostUsd)
-      && Number.isFinite(configuration.expectedTimeMinutes)
-      && Number.isFinite(configuration.score),
-  );
+  const finite = configurations.filter(isFiniteChartConfiguration);
   if (finite.length === 0) {
     const message = createSvgElement("text", {
       x: 480,
@@ -529,7 +532,7 @@ function renderChart(configurations) {
       configuration.paretoEfficient ? "chart-point chart-point-pareto" : "chart-point",
     );
     marker.setAttribute("tabindex", "0");
-    marker.setAttribute("role", "button");
+    marker.setAttribute("role", "img");
     marker.setAttribute("aria-label", markerDetails(configuration));
     marker.addEventListener("mouseenter", () => showChartDetails(configuration, marker));
     marker.addEventListener("mouseleave", hideChartTooltip);
@@ -572,7 +575,7 @@ function render() {
 
   renderChart(floorEligible);
   const tableCount = renderTable(floorEligible);
-  elements.visibleCount.textContent = `Chart ${floorEligible.filter((configuration) => Number.isFinite(configuration.score)).length} · table ${tableCount} · ${paretoCount} Pareto-efficient`;
+  elements.visibleCount.textContent = `Chart ${floorEligible.filter(isFiniteChartConfiguration).length} · table ${tableCount} · ${paretoCount} Pareto-efficient`;
 }
 
 function validateFormulaSelector() {

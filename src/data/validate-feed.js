@@ -37,17 +37,73 @@ function requiredInteger(value, field) {
   return value;
 }
 
-function optionalNumber(value) {
-  return typeof value === "number" && Number.isFinite(value) ? value : null;
+function optionalNumber(value, field) {
+  if (value === null || value === undefined) return null;
+  if (typeof value !== "number" || !Number.isFinite(value)) {
+    throw new FeedValidationError(`${field} must be a finite number when present.`);
+  }
+  return value;
 }
 
 function optionalString(value, field) {
   if (value === null || value === undefined) return null;
-  if (typeof value !== "string") return null;
+  if (typeof value !== "string") {
+    throw new FeedValidationError(`${field} must be a string when present.`);
+  }
   if (value.length > MAX_EXTERNAL_STRING_LENGTH) {
     throw new FeedValidationError(`${field} exceeds ${MAX_EXTERNAL_STRING_LENGTH} characters.`);
   }
   return value;
+}
+
+function requiredTimestamp(value, field) {
+  const timestamp = requiredString(value, field);
+  const match = timestamp.match(
+    /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?(?:Z|[+-]\d{2}:\d{2})$/,
+  );
+  if (!match) {
+    throw new FeedValidationError(`${field} must be an ISO 8601 timestamp.`);
+  }
+
+  const [, year, month, day, hour, minute, second] = match.map(Number);
+  const daysInMonth = new Date(Date.UTC(year, month, 0)).getUTCDate();
+  if (
+    month < 1
+    || month > 12
+    || day < 1
+    || day > daysInMonth
+    || hour > 23
+    || minute > 59
+    || second > 59
+    || Number.isNaN(Date.parse(timestamp))
+  ) {
+    throw new FeedValidationError(`${field} must be a valid ISO 8601 timestamp.`);
+  }
+  return timestamp;
+}
+
+export async function readBoundedResponseText(response) {
+  if (!response.body) {
+    throw new FeedValidationError("Response body is unavailable.");
+  }
+
+  const reader = response.body.getReader();
+  const decoder = new TextDecoder();
+  const parts = [];
+  let responseBytes = 0;
+
+  while (true) {
+    const { done, value } = await reader.read();
+    if (done) break;
+    responseBytes += value.byteLength;
+    if (responseBytes > MAX_RESPONSE_BYTES) {
+      await reader.cancel();
+      throw new FeedValidationError(`Response exceeds ${MAX_RESPONSE_BYTES} bytes.`);
+    }
+    parts.push(decoder.decode(value, { stream: true }));
+  }
+  parts.push(decoder.decode());
+  return parts.join("");
 }
 
 export function parseAndValidateFeed(text) {
@@ -67,10 +123,7 @@ export function parseAndValidateFeed(text) {
     throw new FeedValidationError("Response root must be an object.");
   }
 
-  const generatedAt = requiredString(feed.generated_at, "generated_at");
-  if (Number.isNaN(Date.parse(generatedAt))) {
-    throw new FeedValidationError("generated_at must be an ISO-compatible date.");
-  }
+  const generatedAt = requiredTimestamp(feed.generated_at, "generated_at");
 
   const tasksInSet = requiredInteger(feed.n_tasks_in_set, "n_tasks_in_set");
   if (tasksInSet <= 0) {
@@ -138,13 +191,19 @@ export function parseAndValidateFeed(text) {
       tasksInSet,
       attempts,
       runs,
-      ciHalf: optionalNumber(row.ci_half),
-      ciLow: optionalNumber(row.ci_lo),
-      ciHigh: optionalNumber(row.ci_hi),
+      ciHalf: optionalNumber(row.ci_half, `${prefix}.ci_half`),
+      ciLow: optionalNumber(row.ci_lo, `${prefix}.ci_lo`),
+      ciHigh: optionalNumber(row.ci_hi, `${prefix}.ci_hi`),
       ciMethod: optionalString(row.ci_method, `${prefix}.ci_method`),
-      meanOutputTokens: optionalNumber(row.mean_output_tokens),
-      meanAgentSteps: optionalNumber(row.mean_agent_steps),
-      medianDurationSeconds: optionalNumber(row.median_duration_seconds),
+      meanOutputTokens: optionalNumber(
+        row.mean_output_tokens,
+        `${prefix}.mean_output_tokens`,
+      ),
+      meanAgentSteps: optionalNumber(row.mean_agent_steps, `${prefix}.mean_agent_steps`),
+      medianDurationSeconds: optionalNumber(
+        row.median_duration_seconds,
+        `${prefix}.median_duration_seconds`,
+      ),
       note: optionalString(row.note ?? row.notes, `${prefix}.note`),
     };
   });
