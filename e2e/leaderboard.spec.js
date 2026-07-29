@@ -88,8 +88,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
   await expect(page.getByText("Success rate priority", { exact: true })).toBeVisible();
   await expect(page.getByText("Minimum success rate", { exact: true })).toBeVisible();
-  await expect(page.locator(".chart-axis-label").last()).toHaveText("Success rate (Pass@1)");
+  await expect(page.locator(".chart-axis-label").first()).toHaveText("Success rate (Pass@1)");
+  await expect(page.locator(".chart-axis-label").last()).toHaveText("Relative value");
   await expect(page.getByRole("columnheader", { name: "Success rate" })).toBeVisible();
+  await expect(page.getByRole("columnheader", { name: "Relative value" })).toBeVisible();
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).toBeChecked();
@@ -119,9 +121,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
       & Node.DOCUMENT_POSITION_FOLLOWING)
   ))).toBe(true);
   await expect(page.locator(".chart-point title")).toHaveCount(0);
-  await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↖");
-  await expect(page.locator(".chart-cost-tick")).toHaveText(["$0", "$5", "$10", "$15"]);
-  await expect(page.locator(".chart-pass-tick")).toHaveText([
+  await expect(page.locator(".chart-efficiency-label")).toHaveText("higher overall value ↑");
+  await expect(page.locator(".chart-success-tick")).toHaveText(["60%", "70%", "80%"]);
+  await expect(page.locator(".chart-value-tick")).toHaveText([
     "0%",
     "10%",
     "20%",
@@ -131,12 +133,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "60%",
     "70%",
     "80%",
+    "90%",
+    "100%",
   ]);
-  const costTickPositions = await page.locator(".chart-cost-tick").evaluateAll((ticks) => (
+  const successTickPositions = await page.locator(".chart-success-tick").evaluateAll((ticks) => (
     ticks.map((tick) => Number(tick.getAttribute("x")))
   ));
-  expect(costTickPositions).toEqual([...costTickPositions].sort((left, right) => left - right));
+  expect(successTickPositions).toEqual(
+    [...successTickPositions].sort((left, right) => left - right),
+  );
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);
+  await expect(page.locator("#leaderboard-body tr").first().locator(".relative-value"))
+    .toHaveText("100.0%");
+  await expect(page.locator("#leaderboard-body tr").first().locator(".secondary-metric"))
+    .toContainText("Index ");
   await expect(page.getByText("Partial task coverage")).toBeVisible();
   await expect(page.locator("#content-hash")).not.toHaveText("—");
 
@@ -159,6 +169,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(4);
 
   await page.locator(".chart-point").first().hover();
+  await expect(page.locator("#chart-detail")).toContainText("relative value");
   await expect(page.locator("#chart-detail")).toContainText("first-attempt success");
   await expect(page.locator(".chart-hover-label")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-hover-label-text tspan").first()).toHaveText("model-alpha");
@@ -196,11 +207,17 @@ test("shared model filter applies to the chart and table", async ({ page }) => {
   await page.goto("/");
 
   await expect(page.locator(".model-option input")).toHaveCount(4);
+  const alphaRelativeValue = page.locator("#leaderboard-body tr")
+    .filter({ hasText: "model-alpha" })
+    .locator(".relative-value");
+  const relativeValueBeforeFiltering = (await alphaRelativeValue.textContent()) ?? "";
   await page.locator("#model-filter-summary").click();
-  await page.getByLabel("model-alpha", { exact: true }).uncheck();
+  await page.getByLabel("model-beta", { exact: true }).uncheck();
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (3/4)");
   await expect(page.locator(".chart-point")).toHaveCount(2);
-  await expect(page.locator("#leaderboard-body")).not.toContainText("model-alpha");
+  await expect(page.locator("#leaderboard-body")).not.toContainText("model-beta");
+  await expect(alphaRelativeValue).toHaveText(relativeValueBeforeFiltering);
+  await expect(alphaRelativeValue).not.toHaveText("100.0%");
 
   await page.getByRole("button", { name: "Clear all" }).click();
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (0/4)");
@@ -241,7 +258,7 @@ test("equal scores remain tied with configuration ID as fallback", async ({ page
 
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);
   await expect(page.locator(".rank-cell")).toHaveText(["1", "1"]);
-  await expect(page.locator("#leaderboard-body tr strong")).toHaveText([
+  await expect(page.locator("#leaderboard-body .configuration-name")).toHaveText([
     "model-a [high]",
     "model-b [high]",
   ]);

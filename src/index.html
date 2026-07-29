@@ -25,7 +25,7 @@
     >
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="AI coding agents success rate and expected cost chart">
+    <meta property="og:image:alt" content="AI coding agents relative value and success rate chart">
     <meta name="twitter:card" content="summary_large_image">
     <meta
       name="twitter:image"
@@ -80,7 +80,7 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Selected configurations meeting the success floor</p>
-              <h2 id="chart-heading">Success rate and expected cost</h2>
+              <h2 id="chart-heading">Relative value and success rate</h2>
             </div>
             <div class="chart-legend" aria-label="Chart legend">
               <span><i class="legend-marker pareto-marker"></i>Pareto-efficient</span>
@@ -93,12 +93,13 @@
               class="value-chart"
               viewBox="0 0 960 430"
               role="img"
-              aria-label="Success rate (Pass@1) versus expected cost per success"
+              aria-label="Relative Formula v1 value versus success rate"
               aria-describedby="chart-description"
             >
               <desc id="chart-description">
-                Lower expected cost appears farther left. Diamond points are
-                Pareto-efficient across success rate, expected cost, and expected time.
+                Success rate appears horizontally. Relative value appears vertically
+                and incorporates success rate, expected cost, and expected time.
+                Diamond points are Pareto-efficient across those three outcomes.
               </desc>
             </svg>
           </div>
@@ -145,7 +146,7 @@
             <label class="select-control" for="sort-by">
               <span>Rank table by</span>
               <select id="sort-by">
-                <option value="value">Value index</option>
+                <option value="value">Relative value</option>
                 <option value="performance">Success rate</option>
                 <option value="cost">Lowest cost per success</option>
                 <option value="speed">Fastest time per success</option>
@@ -163,7 +164,7 @@
                 <tr>
                   <th scope="col">Rank</th>
                   <th scope="col">Configuration</th>
-                  <th scope="col" class="numeric">Index</th>
+                  <th scope="col" class="numeric">Relative value</th>
                   <th scope="col" class="numeric">Success rate</th>
                   <th scope="col" class="numeric">Cost / success</th>
                   <th scope="col" class="numeric">Time / success</th>

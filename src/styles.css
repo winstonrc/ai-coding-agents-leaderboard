@@ -326,6 +326,11 @@ input[type="range"] {
   vector-effect: non-scaling-stroke;
 }
 
+.secondary-metric {
+  display: block;
+  font-size: 0.8rem;
+}
+
 .chart-link.chart-series {
   fill: none;
   stroke: currentColor;

@@ -106,12 +106,8 @@ function formatCurrency(value) {
   }).format(value);
 }
 
-function formatAxisCurrency(value) {
-  return new Intl.NumberFormat("en-US", {
-    style: "currency",
-    currency: "USD",
-    maximumFractionDigits: 0,
-  }).format(value);
+function formatRelativeValue(value) {
+  return Number.isFinite(value) ? `${value.toFixed(1)}%` : "—";
 }
 
 function formatDuration(value) {
@@ -393,7 +389,7 @@ function renderTable(configurations) {
     appendText(row, "td", String(displayedRank), "rank-cell");
 
     const nameCell = document.createElement("td");
-    appendText(nameCell, "strong", configurationName(configuration));
+    appendText(nameCell, "strong", configurationName(configuration), "configuration-name");
     const effort = configuration.reasoningEffort ?? "default";
     const details = [
       configuration.harness,
@@ -412,12 +408,25 @@ function renderTable(configurations) {
     }
     row.append(nameCell);
 
+    const valueCell = document.createElement("td");
+    valueCell.className = "numeric";
     appendText(
-      row,
-      "td",
-      Number.isFinite(configuration.score) ? configuration.score.toFixed(1) : "Unpriced",
-      "numeric",
+      valueCell,
+      "strong",
+      Number.isFinite(configuration.relativeValue)
+        ? formatRelativeValue(configuration.relativeValue)
+        : "Unpriced",
+      "relative-value",
     );
+    appendText(
+      valueCell,
+      "span",
+      Number.isFinite(configuration.score)
+        ? `Index ${configuration.score.toFixed(1)}`
+        : "Index —",
+      "secondary-metric",
+    );
+    row.append(valueCell);
 
     const performanceText = Number.isFinite(configuration.ciHalf)
       ? `${formatPercent(configuration.passAt1)} ±${formatPercent(configuration.ciHalf)}`
@@ -445,16 +454,9 @@ function clearChart() {
     .forEach((element) => element.remove());
 }
 
-function niceInterval(value) {
-  const magnitude = 10 ** Math.floor(Math.log10(value));
-  const normalized = value / magnitude;
-  const multiplier = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
-  return multiplier * magnitude;
-}
-
 function markerDetails(configuration) {
   const status = configuration.paretoEfficient ? "Pareto-efficient" : "Not Pareto-efficient";
-  return `${configurationName(configuration)} — ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, value index ${configuration.score.toFixed(1)}. ${status}.`;
+  return `${configurationName(configuration)} — ${formatRelativeValue(configuration.relativeValue)} relative value, ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, index ${configuration.score.toFixed(1)}. ${status}.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {
@@ -474,12 +476,12 @@ function showChartDetails(configuration, marker, groupId) {
   const horizontal = crosshair.querySelector(".chart-crosshair-horizontal");
   horizontal.setAttribute("y1", yPosition);
   horizontal.setAttribute("y2", yPosition);
-  const costLabel = crosshair.querySelector(".chart-crosshair-cost");
-  costLabel.setAttribute("x", xPosition);
-  costLabel.textContent = formatCurrency(configuration.expectedCostUsd);
-  const passLabel = crosshair.querySelector(".chart-crosshair-pass");
-  passLabel.setAttribute("y", String(Number(yPosition) + 4));
-  passLabel.textContent = formatPercent(configuration.passAt1);
+  const successLabel = crosshair.querySelector(".chart-crosshair-success");
+  successLabel.setAttribute("x", xPosition);
+  successLabel.textContent = formatPercent(configuration.passAt1);
+  const valueLabel = crosshair.querySelector(".chart-crosshair-value");
+  valueLabel.setAttribute("y", String(Number(yPosition) + 4));
+  valueLabel.textContent = formatRelativeValue(configuration.relativeValue);
 
   const callout = elements.chart.querySelector(".chart-hover-label");
   const connector = callout.querySelector("line");
@@ -523,7 +525,8 @@ function hideChartDetails() {
 function isFiniteChartConfiguration(configuration) {
   return Number.isFinite(configuration.expectedCostUsd)
     && Number.isFinite(configuration.expectedTimeMinutes)
-    && Number.isFinite(configuration.score);
+    && Number.isFinite(configuration.score)
+    && Number.isFinite(configuration.relativeValue);
 }
 
 function distributeChartLabels(labels, minimumY, maximumY, gap) {
@@ -563,35 +566,46 @@ function renderChart(configurations) {
   const margin = { top: 28, right: 34, bottom: 62, left: 68 };
   const width = 960 - margin.left - margin.right;
   const height = 430 - margin.top - margin.bottom;
-  const highestCost = Math.max(
-    ...finite.map((configuration) => configuration.expectedCostUsd),
+  const successInterval = 0.1;
+  let minimumSuccess = Math.max(
+    0,
+    Math.floor(
+      (
+        Math.min(...finite.map((configuration) => configuration.passAt1))
+        + 1e-9
+      )
+        / successInterval,
+    ) * successInterval,
   );
-  const costInterval = highestCost <= 50
-    ? 5
-    : niceInterval(highestCost / 8);
-  const maximumCost = Math.ceil(
-    highestCost * 1.05 / costInterval,
-  ) * costInterval;
-  const costTickCount = Math.round(maximumCost / costInterval);
-  const passInterval = 0.1;
-  const maximumPass = Math.min(
+  const maximumSuccess = Math.min(
     1,
     Math.max(
-      0.8,
+      minimumSuccess + 0.2,
       Math.ceil(
-        Math.max(...finite.map((configuration) => configuration.passAt1))
-          / passInterval,
-      ) * passInterval,
+        (
+          Math.max(...finite.map((configuration) => configuration.passAt1))
+          - 1e-9
+        )
+          / successInterval,
+      ) * successInterval,
     ),
   );
-  const passTickCount = Math.round(maximumPass / passInterval);
-  const x = (cost) => margin.left + width * cost / maximumCost;
-  const y = (passAt1) => margin.top + height * (1 - passAt1 / maximumPass);
+  if (minimumSuccess >= maximumSuccess) {
+    minimumSuccess = Math.max(0, maximumSuccess - successInterval);
+  }
+  const successTickCount = Math.round(
+    (maximumSuccess - minimumSuccess) / successInterval,
+  );
+  const relativeValueInterval = 10;
+  const relativeValueTickCount = 100 / relativeValueInterval;
+  const x = (passAt1) => margin.left
+    + width * (passAt1 - minimumSuccess) / (maximumSuccess - minimumSuccess);
+  const y = (relativeValue) => margin.top + height * (1 - relativeValue / 100);
 
   const grid = createSvgElement("g");
-  for (let index = 0; index <= costTickCount; index += 1) {
-    const cost = costInterval * index;
-    const xPosition = x(cost);
+  for (let index = 0; index <= successTickCount; index += 1) {
+    const successRate = minimumSuccess + successInterval * index;
+    const xPosition = x(successRate);
     grid.append(createSvgElement("line", {
       x1: xPosition,
       x2: xPosition,
@@ -603,14 +617,14 @@ function renderChart(configurations) {
       x: xPosition,
       y: margin.top + height + 25,
       "text-anchor": "middle",
-      class: "chart-tick chart-cost-tick",
+      class: "chart-tick chart-success-tick",
     });
-    label.textContent = formatAxisCurrency(cost);
+    label.textContent = formatPercent(successRate, 0);
     grid.append(label);
   }
-  for (let index = 0; index <= passTickCount; index += 1) {
-    const passAt1 = passInterval * index;
-    const yPosition = y(passAt1);
+  for (let index = 0; index <= relativeValueTickCount; index += 1) {
+    const relativeValue = relativeValueInterval * index;
+    const yPosition = y(relativeValue);
     grid.append(createSvgElement("line", {
       x1: margin.left,
       x2: margin.left + width,
@@ -622,9 +636,9 @@ function renderChart(configurations) {
       x: margin.left - 12,
       y: yPosition + 4,
       "text-anchor": "end",
-      class: "chart-tick chart-pass-tick",
+      class: "chart-tick chart-value-tick",
     });
-    label.textContent = formatPercent(passAt1, 0);
+    label.textContent = `${relativeValue}%`;
     grid.append(label);
   }
   elements.chart.append(grid);
@@ -635,7 +649,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  xLabel.textContent = "Expected cost per success";
+  xLabel.textContent = "Success rate (Pass@1)";
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
@@ -645,16 +659,16 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Success rate (Pass@1)";
+  yLabel.textContent = "Relative value";
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
-    x: margin.left + 8,
+    x: margin.left + width - 8,
     y: margin.top + 18,
-    "text-anchor": "start",
+    "text-anchor": "end",
     class: "chart-efficiency-label",
   });
-  efficiencyLabel.textContent = "most efficient ↖";
+  efficiencyLabel.textContent = "higher overall value ↑";
   elements.chart.append(efficiencyLabel);
 
   const groups = new Map();
@@ -689,12 +703,12 @@ function renderChart(configurations) {
     createSvgElement("text", {
       y: margin.top + height + 25,
       "text-anchor": "middle",
-      class: "chart-crosshair-label chart-crosshair-cost",
+      class: "chart-crosshair-label chart-crosshair-success",
     }),
     createSvgElement("text", {
       x: margin.left - 12,
       "text-anchor": "end",
-      class: "chart-crosshair-label chart-crosshair-pass",
+      class: "chart-crosshair-label chart-crosshair-value",
     }),
   );
   elements.chart.append(crosshair);
@@ -709,7 +723,7 @@ function renderChart(configurations) {
       const path = sorted
         .map((configuration, index) => {
           const command = index === 0 ? "M" : "L";
-          return `${command}${x(configuration.expectedCostUsd)},${y(configuration.passAt1)}`;
+          return `${command}${x(configuration.passAt1)},${y(configuration.relativeValue)}`;
         })
         .join(" ");
       const seriesIndex = Number(groupIdentifiers.get(key)) % CHART_SERIES_COUNT;
@@ -725,8 +739,8 @@ function renderChart(configurations) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-    const xPosition = x(configuration.expectedCostUsd);
-    const yPosition = y(configuration.passAt1);
+    const xPosition = x(configuration.passAt1);
+    const yPosition = y(configuration.relativeValue);
     const marker = configuration.paretoEfficient
       ? createSvgElement("rect", {
         x: xPosition - 5,
@@ -750,6 +764,7 @@ function renderChart(configurations) {
     marker.setAttribute("data-chart-group", groupId);
     marker.setAttribute("data-chart-x", String(xPosition));
     marker.setAttribute("data-chart-y", String(yPosition));
+    marker.setAttribute("data-config", configuration.config);
     marker.setAttribute("tabindex", "0");
     marker.setAttribute("role", "img");
     marker.setAttribute("aria-label", markerDetails(configuration));
@@ -769,8 +784,8 @@ function renderChart(configurations) {
   const labelGroups = { start: [], end: [] };
   for (const [key, group] of sortedGroups) {
     const representative = group[Math.floor((group.length - 1) / 2)];
-    const xPosition = x(representative.expectedCostUsd);
-    const yPosition = y(representative.passAt1);
+    const xPosition = x(representative.passAt1);
+    const yPosition = y(representative.relativeValue);
     const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
     labelGroups[anchor].push({
       key,
@@ -869,13 +884,30 @@ function renderProvenance() {
 
 function render() {
   if (!state.feed) return;
+  const allScored = rankConfigurations(
+    state.feed.configurations,
+    state.priorities,
+  );
+  const floorReference = allScored.filter(
+    (configuration) => configuration.passAt1 >= state.performanceFloor
+      && Number.isFinite(configuration.score),
+  );
+  const highestScore = floorReference.length > 0
+    ? Math.max(...floorReference.map((configuration) => configuration.score))
+    : null;
   const selectedConfigurations = state.feed.configurations.filter(
     (configuration) => state.selectedModelKeys.has(modelKey(configuration)),
   );
   const scored = rankConfigurations(selectedConfigurations, state.priorities);
-  const floorEligible = scored.filter(
-    (configuration) => configuration.passAt1 >= state.performanceFloor,
-  );
+  const floorEligible = scored
+    .filter((configuration) => configuration.passAt1 >= state.performanceFloor)
+    .map((configuration) => ({
+      ...configuration,
+      relativeValue: Number.isFinite(highestScore) && highestScore > 0
+        && Number.isFinite(configuration.score)
+        ? configuration.score / highestScore * 100
+        : null,
+    }));
   const paretoCount = floorEligible.filter(
     (configuration) => configuration.paretoEfficient,
   ).length;
