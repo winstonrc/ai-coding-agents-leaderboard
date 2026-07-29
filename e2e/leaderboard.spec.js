@@ -396,7 +396,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   expect(consoleErrors).toEqual([]);
 });
 
-test("each point owns one fixed label and interaction only changes visibility", async ({ page }) => {
+test("each family labels its highest-value effort and interactions keep positions fixed", async ({ page }) => {
   await routeFeed(page, feed({
     rows: [
       row(),
@@ -404,8 +404,8 @@ test("each point owns one fixed label and interaction only changes visibility", 
         config: "agent-alpha-max",
         reasoning_effort: "max",
         pass_at_1: 0.75,
-        mean_cost_usd: 9,
-        mean_duration_seconds: 1_500,
+        mean_cost_usd: 2,
+        mean_duration_seconds: 3_000,
       }),
     ],
   }));
@@ -416,6 +416,9 @@ test("each point owns one fixed label and interaction only changes visibility", 
   await expect(page.locator(
     '.chart-point-label[data-default-visible="true"]',
   )).toHaveCount(1);
+  await expect(page.locator(
+    '.chart-point-label[data-default-visible="true"]',
+  )).toHaveAttribute("data-config", "agent-alpha-max");
 
   for (const config of ["agent-alpha-high", "agent-alpha-max"]) {
     const marker = page.locator(`.chart-point-group[data-config="${config}"]`);
@@ -432,6 +435,11 @@ test("each point owns one fixed label and interaction only changes visibility", 
     await page.locator("#chart-heading").hover();
     await expect(label).not.toHaveClass(/is-active/);
   }
+
+  await page.locator("#cost-priority").fill("0");
+  await expect(page.locator(
+    '.chart-point-label[data-default-visible="true"]',
+  )).toHaveAttribute("data-config", "agent-alpha-high");
 });
 
 test("shared model filter applies to the chart and table", async ({ page }) => {

@@ -803,7 +803,12 @@ function renderChart(configurations) {
 
   const labelGroups = { start: [], end: [] };
   for (const [key, group] of sortedGroups) {
-    const representative = group[Math.floor((group.length - 1) / 2)];
+    const representative = group.reduce((best, candidate) => {
+      if (candidate.score !== best.score) {
+        return candidate.score > best.score ? candidate : best;
+      }
+      return candidate.config.localeCompare(best.config) < 0 ? candidate : best;
+    });
     const xPosition = x(representative.amortizedCostPerPassUsd);
     const yPosition = y(representative.amortizedAgentTimePerPassMinutes);
     const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
