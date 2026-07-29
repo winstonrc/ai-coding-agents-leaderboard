@@ -88,7 +88,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
   await expect(page.getByText("Success rate priority", { exact: true })).toBeVisible();
   await expect(page.getByText("Minimum success rate", { exact: true })).toBeVisible();
-  await expect(page.locator(".chart-axis-label").first()).toHaveText("Success rate (Pass@1)");
+  await expect(page.locator(".chart-axis-label").first()).toHaveText("First-attempt success rate");
   await expect(page.locator(".chart-axis-label").last()).toHaveText("Relative value");
   await expect(page.getByRole("columnheader", { name: "Success rate" })).toBeVisible();
   await expect(page.getByRole("columnheader", { name: "Relative value" })).toBeVisible();

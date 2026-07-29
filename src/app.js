@@ -649,7 +649,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  xLabel.textContent = "Success rate (Pass@1)";
+  xLabel.textContent = "First-attempt success rate";
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
