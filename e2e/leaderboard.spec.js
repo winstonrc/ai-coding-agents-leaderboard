@@ -101,6 +101,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("footer").getByRole("link", { name: "DeepSWE by DataCurve" }))
     .toHaveAttribute("href", "https://deepswe.datacurve.ai/");
   await expect(page.locator(".chart-point")).toHaveCount(3);
+  await expect(page.locator(".chart-point title").first()).toHaveText("model-alpha [high]");
   await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↗");
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);
   await expect(page.getByText("Partial task coverage")).toBeVisible();
@@ -129,9 +130,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
   await page.locator("#chart-heading").hover();
-  await expect(page.locator("#chart-detail")).toHaveText(
-    "Focus or hover a point for exact values.",
-  );
+  await expect(page.locator("#chart-detail")).toBeEmpty();
   await page.locator(".chart-point").nth(1).focus();
   await expect(page.locator("#chart-detail")).toContainText("model-beta [medium]");
   await expect(page.locator(".chart-point").first()).toHaveAttribute("role", "img");
