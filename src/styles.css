@@ -195,9 +195,8 @@ input[type="range"] {
 
 .chart-grid,
 .chart-axis {
-  stroke: GrayText;
+  stroke: #d8d8d8;
   stroke-width: 1;
-  opacity: 0.35;
   vector-effect: non-scaling-stroke;
 }
 
@@ -209,27 +208,25 @@ input[type="range"] {
 }
 
 .chart-axis-label {
-  font-weight: bold;
+  font-weight: normal;
 }
 
 .chart-link {
   fill: none;
-  stroke: GrayText;
-  stroke-width: 1.5;
-  opacity: 0.45;
+  stroke-width: 2;
+  opacity: 0.75;
+  pointer-events: none;
   vector-effect: non-scaling-stroke;
 }
 
 .chart-point {
-  fill: Canvas;
-  stroke: CanvasText;
-  stroke-width: 2;
+  stroke-width: 1.5;
   vector-effect: non-scaling-stroke;
 }
 
 .chart-point-pareto {
-  fill: Highlight;
   stroke: CanvasText;
+  stroke-width: 2;
 }
 
 .chart-point:focus-visible {
@@ -238,22 +235,107 @@ input[type="range"] {
 }
 
 .chart-label {
-  fill: CanvasText;
   font-size: 13px;
-  font-weight: bold;
+  font-weight: normal;
+  pointer-events: none;
 }
 
-.chart-tooltip {
-  position: absolute;
-  z-index: 2;
-  max-width: min(340px, calc(100vw - 48px));
-  padding: 6px 8px;
-  border: 1px solid;
-  background: Canvas;
-  color: CanvasText;
-  font-size: 0.82rem;
+.chart-effort-label {
+  font-size: 9px;
+  font-weight: normal;
+}
+
+.chart-series {
+  transition: opacity 120ms ease;
+}
+
+.chart-series.is-muted {
+  opacity: 0.16;
+}
+
+.chart-link.chart-series {
+  fill: none;
+  stroke: currentColor;
+}
+
+.chart-point.chart-series {
+  fill: currentColor;
+  stroke: currentColor;
+}
+
+.chart-point.chart-point-pareto {
+  stroke: CanvasText;
+  stroke-width: 2;
+}
+
+.chart-label.chart-series {
+  fill: currentColor;
+}
+
+.chart-label-connector.chart-series {
+  stroke: currentColor;
+  stroke-width: 1;
+  opacity: 0.45;
   pointer-events: none;
-  transform: translate(-50%, calc(-100% - 10px));
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-series-0 {
+  color: #d97735;
+}
+
+.chart-series-1 {
+  color: #2f9d61;
+}
+
+.chart-series-2 {
+  color: #3078c9;
+}
+
+.chart-series-3 {
+  color: #d64550;
+}
+
+.chart-series-4 {
+  color: #7a65b3;
+}
+
+.chart-series-5 {
+  color: #9b6a4a;
+}
+
+.chart-series-6 {
+  color: #138c8c;
+}
+
+.chart-series-7 {
+  color: #c28300;
+}
+
+.chart-series-8 {
+  color: #6f6f6f;
+}
+
+.chart-series-9 {
+  color: #b85b8d;
+}
+
+.chart-crosshair-line {
+  stroke: #d64550;
+  stroke-width: 1;
+  stroke-dasharray: 5 5;
+  pointer-events: none;
+  vector-effect: non-scaling-stroke;
+}
+
+.chart-crosshair {
+  pointer-events: none;
+}
+
+.chart-crosshair-label {
+  fill: #d64550;
+  font-size: 13px;
+  font-weight: normal;
 }
 
 .chart-detail {

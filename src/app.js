@@ -16,6 +16,7 @@ import {
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
+const CHART_SERIES_COUNT = 10;
 const EFFORT_ORDER = new Map([
   ["low", 0],
   ["medium", 1],
@@ -43,7 +44,6 @@ const elements = {
   paretoOnly: document.querySelector("#pareto-only"),
   visibleCount: document.querySelector("#visible-count"),
   chart: document.querySelector("#value-chart"),
-  chartTooltip: document.querySelector("#chart-tooltip"),
   chartDetail: document.querySelector("#chart-detail"),
   tableBody: document.querySelector("#leaderboard-body"),
   emptyState: document.querySelector("#empty-state"),
@@ -354,7 +354,6 @@ function clearChart() {
   elements.chart
     .querySelectorAll(":scope > :not(title):not(desc)")
     .forEach((element) => element.remove());
-  elements.chartTooltip.hidden = true;
 }
 
 function niceMaximum(value) {
@@ -370,28 +369,60 @@ function markerDetails(configuration) {
   return `${configurationName(configuration)} — ${formatPercent(configuration.passAt1)} Pass@1, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, value index ${configuration.score.toFixed(1)}. ${status}.`;
 }
 
-function showChartDetails(configuration, marker) {
-  const details = markerDetails(configuration);
-  elements.chartDetail.textContent = details;
-  elements.chartTooltip.textContent = details;
-  elements.chartTooltip.hidden = false;
+function showChartDetails(configuration, marker, groupId) {
+  elements.chartDetail.textContent = markerDetails(configuration);
+  elements.chart.querySelectorAll(".chart-series").forEach((element) => {
+    element.classList.toggle("is-muted", element.dataset.chartGroup !== groupId);
+  });
 
-  const chartRect = elements.chart.getBoundingClientRect();
-  const markerRect = marker.getBoundingClientRect();
-  const left = markerRect.left - chartRect.left + markerRect.width / 2;
-  const top = markerRect.top - chartRect.top;
-  elements.chartTooltip.style.left = `${Math.max(8, Math.min(left, chartRect.width - 180))}px`;
-  elements.chartTooltip.style.top = `${Math.max(8, top - 12)}px`;
+  const crosshair = elements.chart.querySelector(".chart-crosshair");
+  crosshair.setAttribute("visibility", "visible");
+  const xPosition = marker.dataset.chartX;
+  const yPosition = marker.dataset.chartY;
+  const vertical = crosshair.querySelector(".chart-crosshair-vertical");
+  vertical.setAttribute("x1", xPosition);
+  vertical.setAttribute("x2", xPosition);
+  const horizontal = crosshair.querySelector(".chart-crosshair-horizontal");
+  horizontal.setAttribute("y1", yPosition);
+  horizontal.setAttribute("y2", yPosition);
+  const costLabel = crosshair.querySelector(".chart-crosshair-cost");
+  costLabel.setAttribute("x", xPosition);
+  costLabel.textContent = formatCurrency(configuration.expectedCostUsd);
+  const passLabel = crosshair.querySelector(".chart-crosshair-pass");
+  passLabel.setAttribute("y", String(Number(yPosition) + 4));
+  passLabel.textContent = formatPercent(configuration.passAt1);
 }
 
-function hideChartTooltip() {
-  elements.chartTooltip.hidden = true;
+function hideChartDetails() {
+  elements.chart.querySelector(".chart-crosshair")?.setAttribute("visibility", "hidden");
+  elements.chart.querySelectorAll(".chart-series").forEach((element) => {
+    element.classList.remove("is-muted");
+  });
 }
 
 function isFiniteChartConfiguration(configuration) {
   return Number.isFinite(configuration.expectedCostUsd)
     && Number.isFinite(configuration.expectedTimeMinutes)
     && Number.isFinite(configuration.score);
+}
+
+function distributeChartLabels(labels, minimumY, maximumY, gap) {
+  const sorted = labels.sort((left, right) => left.desiredY - right.desiredY);
+  let nextY = minimumY;
+  for (const label of sorted) {
+    label.y = Math.max(label.desiredY, nextY);
+    nextY = label.y + gap;
+  }
+
+  const overflow = Math.max(0, nextY - gap - maximumY);
+  for (const label of sorted) {
+    label.y -= overflow;
+  }
+
+  for (let index = sorted.length - 2; index >= 0; index -= 1) {
+    sorted[index].y = Math.min(sorted[index].y, sorted[index + 1].y - gap);
+  }
+  return sorted;
 }
 
 function renderChart(configurations) {
@@ -489,28 +520,67 @@ function renderChart(configurations) {
     group.push(configuration);
     groups.set(key, group);
   }
-  for (const group of groups.values()) {
+  const sortedGroups = [...groups.entries()].sort(([left], [right]) => (
+    left.localeCompare(right)
+  ));
+  const groupIdentifiers = new Map(
+    sortedGroups.map(([key], index) => [key, String(index)]),
+  );
+
+  const crosshair = createSvgElement("g", {
+    class: "chart-crosshair",
+    visibility: "hidden",
+  });
+  crosshair.append(
+    createSvgElement("line", {
+      y1: margin.top,
+      y2: margin.top + height,
+      class: "chart-crosshair-line chart-crosshair-vertical",
+    }),
+    createSvgElement("line", {
+      x1: margin.left,
+      x2: margin.left + width,
+      class: "chart-crosshair-line chart-crosshair-horizontal",
+    }),
+    createSvgElement("text", {
+      y: margin.top + height + 25,
+      "text-anchor": "middle",
+      class: "chart-crosshair-label chart-crosshair-cost",
+    }),
+    createSvgElement("text", {
+      x: margin.left - 12,
+      "text-anchor": "end",
+      class: "chart-crosshair-label chart-crosshair-pass",
+    }),
+  );
+  elements.chart.append(crosshair);
+
+  for (const [key, group] of sortedGroups) {
     const sorted = group.sort((left, right) => {
       const leftOrder = EFFORT_ORDER.get(left.reasoningEffort) ?? 6;
       const rightOrder = EFFORT_ORDER.get(right.reasoningEffort) ?? 6;
       return leftOrder - rightOrder || left.config.localeCompare(right.config);
     });
-    if (sorted.length < 2) continue;
-    const path = sorted
-      .map((configuration, index) => {
-        const command = index === 0 ? "M" : "L";
-        return `${command}${x(configuration.expectedCostUsd)},${y(configuration.passAt1)}`;
-      })
-      .join(" ");
-    elements.chart.append(createSvgElement("path", { d: path, class: "chart-link" }));
+    if (sorted.length >= 2) {
+      const path = sorted
+        .map((configuration, index) => {
+          const command = index === 0 ? "M" : "L";
+          return `${command}${x(configuration.expectedCostUsd)},${y(configuration.passAt1)}`;
+        })
+        .join(" ");
+      const seriesIndex = Number(groupIdentifiers.get(key)) % CHART_SERIES_COUNT;
+      elements.chart.append(createSvgElement("path", {
+        d: path,
+        class: `chart-link chart-series chart-series-${seriesIndex}`,
+        "data-chart-group": groupIdentifiers.get(key),
+      }));
+    }
   }
 
-  const valueLeader = [...finite].sort((left, right) => right.score - left.score)[0];
-  const performanceLeader = [...finite].sort(
-    (left, right) => right.passAt1 - left.passAt1 || left.config.localeCompare(right.config),
-  )[0];
-
   for (const configuration of finite) {
+    const key = `${configuration.harness}\u0000${configuration.model}`;
+    const groupId = groupIdentifiers.get(key);
+    const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
     const xPosition = x(configuration.expectedCostUsd);
     const yPosition = y(configuration.passAt1);
     const marker = configuration.paretoEfficient
@@ -529,28 +599,96 @@ function renderChart(configurations) {
 
     marker.setAttribute(
       "class",
-      configuration.paretoEfficient ? "chart-point chart-point-pareto" : "chart-point",
+      configuration.paretoEfficient
+        ? `chart-point chart-point-pareto chart-series chart-series-${seriesIndex}`
+        : `chart-point chart-series chart-series-${seriesIndex}`,
     );
+    marker.setAttribute("data-chart-group", groupId);
+    marker.setAttribute("data-chart-x", String(xPosition));
+    marker.setAttribute("data-chart-y", String(yPosition));
     marker.setAttribute("tabindex", "0");
     marker.setAttribute("role", "img");
     marker.setAttribute("aria-label", markerDetails(configuration));
-    marker.addEventListener("mouseenter", () => showChartDetails(configuration, marker));
-    marker.addEventListener("mouseleave", hideChartTooltip);
-    marker.addEventListener("focus", () => showChartDetails(configuration, marker));
-    marker.addEventListener("blur", hideChartTooltip);
+    marker.addEventListener(
+      "mouseenter",
+      () => showChartDetails(configuration, marker, groupId),
+    );
+    marker.addEventListener("mouseleave", hideChartDetails);
+    marker.addEventListener(
+      "focus",
+      () => showChartDetails(configuration, marker, groupId),
+    );
+    marker.addEventListener("blur", hideChartDetails);
     elements.chart.append(marker);
+  }
 
-    if (configuration === valueLeader || configuration === performanceLeader) {
-      const isValueLeader = configuration === valueLeader;
-      const label = createSvgElement("text", {
-        x: xPosition > 760 ? xPosition - 10 : xPosition + 10,
-        y: yPosition + (isValueLeader ? 24 : -10),
-        "text-anchor": xPosition > 760 ? "end" : "start",
-        class: "chart-label",
-      });
-      label.textContent = configurationName(configuration);
-      elements.chart.append(label);
-    }
+  const labelGroups = { start: [], end: [] };
+  for (const [key, group] of sortedGroups) {
+    const representative = group[Math.floor((group.length - 1) / 2)];
+    const xPosition = x(representative.expectedCostUsd);
+    const yPosition = y(representative.passAt1);
+    const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
+    labelGroups[anchor].push({
+      key,
+      representative,
+      xPosition,
+      yPosition,
+      desiredY: yPosition - 7,
+      anchor,
+    });
+  }
+
+  const labels = [
+    ...distributeChartLabels(
+      labelGroups.start,
+      margin.top + 10,
+      margin.top + height - 10,
+      25,
+    ),
+    ...distributeChartLabels(
+      labelGroups.end,
+      margin.top + 10,
+      margin.top + height - 10,
+      25,
+    ),
+  ];
+
+  for (const entry of labels) {
+    const {
+      key,
+      representative,
+      xPosition,
+      yPosition,
+      anchor,
+    } = entry;
+    const groupId = groupIdentifiers.get(key);
+    const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
+    const labelX = anchor === "end" ? xPosition - 12 : xPosition + 12;
+    elements.chart.append(createSvgElement("line", {
+      x1: xPosition,
+      y1: yPosition,
+      x2: anchor === "end" ? labelX + 3 : labelX - 3,
+      y2: entry.y - 4,
+      class: `chart-label-connector chart-series chart-series-${seriesIndex}`,
+      "data-chart-group": groupId,
+    }));
+    const label = createSvgElement("text", {
+      x: labelX,
+      y: entry.y,
+      "text-anchor": anchor,
+      class: `chart-label chart-series chart-series-${seriesIndex}`,
+      "data-chart-group": groupId,
+    });
+    const modelName = createSvgElement("tspan", { x: label.getAttribute("x") });
+    modelName.textContent = representative.model;
+    const effort = createSvgElement("tspan", {
+      x: label.getAttribute("x"),
+      dy: 12,
+      class: "chart-effort-label",
+    });
+    effort.textContent = (representative.reasoningEffort ?? "default").toUpperCase();
+    label.append(modelName, effort);
+    elements.chart.append(label);
   }
 }
 
