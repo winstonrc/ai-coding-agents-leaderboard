@@ -250,6 +250,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     '.chart-point-label[data-default-visible="true"] text',
   ).evaluateAll((labels) => labels.map((label) => label.getBoundingClientRect().top));
   expect(Math.min(...defaultLabelTopPositions)).toBeGreaterThanOrEqual(plotTop);
+  const defaultConnectorLengths = await page.locator(
+    '.chart-point-label[data-default-visible="true"] .chart-label-connector',
+  ).evaluateAll((connectors) => connectors.map((connector) => Math.hypot(
+    Number(connector.getAttribute("x2")) - Number(connector.getAttribute("x1")),
+    Number(connector.getAttribute("y2")) - Number(connector.getAttribute("y1")),
+  )));
+  expect(Math.min(...defaultConnectorLengths)).toBeGreaterThanOrEqual(12);
   const verticalAxisLabelBox = await page.locator(".chart-axis-label").last().boundingBox();
   const timeTickBoxes = await page.locator(".chart-time-tick").evaluateAll((ticks) => (
     ticks.map((tick) => {

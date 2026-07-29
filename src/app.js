@@ -817,7 +817,7 @@ function renderChart(configurations) {
       representative,
       xPosition,
       yPosition,
-      desiredY: yPosition < margin.top + 50 ? yPosition + 24 : yPosition - 7,
+      desiredY: yPosition < margin.top + 50 ? yPosition + 24 : yPosition - 18,
       anchor,
     });
   }
