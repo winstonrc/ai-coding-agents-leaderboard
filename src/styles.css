@@ -201,11 +201,13 @@ input[type="range"] {
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
+  justify-content: flex-end;
   gap: 12px;
+  margin-bottom: 8px;
   font-size: 0.85rem;
 }
 
-.chart-legend span {
+.chart-legend .legend-item {
   display: inline-flex;
   align-items: center;
   gap: 6px;
@@ -548,6 +550,10 @@ code {
   .visible-count {
     width: 100%;
     margin-left: 0;
+  }
+
+  .chart-legend {
+    justify-content: flex-start;
   }
 
   .chart-tick,

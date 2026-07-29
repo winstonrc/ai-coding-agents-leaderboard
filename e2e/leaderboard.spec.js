@@ -144,10 +144,25 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-section > p").first()).toContainText(
     "The bottom-left is more efficient.",
   );
-  await expect(page.locator(".chart-legend span")).toHaveText([
+  await expect(page.locator(".chart-legend")).toContainText("Points:");
+  await expect(page.locator(".chart-legend .legend-item")).toHaveText([
     "Pareto-efficient",
     "Not Pareto-efficient",
   ]);
+  expect(await page.locator(".chart-section").evaluate((section) => {
+    const explanation = section.querySelector(":scope > p");
+    const legend = section.querySelector(".chart-legend");
+    const chart = section.querySelector(".chart-wrap");
+    return Boolean(
+      explanation.compareDocumentPosition(legend) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ) && Boolean(
+      legend.compareDocumentPosition(chart) & Node.DOCUMENT_POSITION_FOLLOWING,
+    );
+  })).toBe(true);
+  await expect(page.locator(".chart-legend")).toHaveCSS(
+    "justify-content",
+    test.info().project.name === "mobile-320" ? "flex-start" : "flex-end",
+  );
   const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
     labels.map((label) => ({
       paintOrder: getComputedStyle(label).paintOrder,
