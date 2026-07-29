@@ -489,6 +489,53 @@ test("each family labels its highest-value effort and interactions keep position
   )).toHaveAttribute("data-config", "agent-alpha-high");
 });
 
+test("dense chart labels avoid other labels and connectors", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: Array.from({ length: 4 }, (_, index) => row({
+      config: `dense-${index}`,
+      model: `dense-model-${index}`,
+      pass_at_1: 0.7,
+      mean_cost_usd: 4.2 + index * 0.12,
+      mean_duration_seconds: 1_000 + index * 25,
+    })),
+  }));
+  await page.goto("/?formula=v1");
+
+  const labels = await page.locator(
+    '.chart-point-label[data-default-visible="true"] text',
+  ).evaluateAll((elements) => elements.map((element) => {
+    const box = element.getBoundingClientRect();
+    return {
+      bottom: box.bottom,
+      left: box.left,
+      right: box.right,
+      top: box.top,
+    };
+  }));
+  for (let leftIndex = 0; leftIndex < labels.length; leftIndex += 1) {
+    for (let rightIndex = leftIndex + 1; rightIndex < labels.length; rightIndex += 1) {
+      expect(
+        labels[leftIndex].left < labels[rightIndex].right
+          && labels[leftIndex].right > labels[rightIndex].left
+          && labels[leftIndex].top < labels[rightIndex].bottom
+          && labels[leftIndex].bottom > labels[rightIndex].top,
+      ).toBe(false);
+    }
+  }
+  const connectorOffsets = await page.locator(
+    '.chart-point-label[data-default-visible="true"] .chart-label-connector',
+  ).evaluateAll((connectors) => connectors.map((connector) => ({
+    x: Math.abs(
+      Number(connector.getAttribute("x2")) - Number(connector.getAttribute("x1")),
+    ),
+    y: Math.abs(
+      Number(connector.getAttribute("y2")) - Number(connector.getAttribute("y1")),
+    ),
+  })));
+  expect(connectorOffsets.every((offset) => offset.x >= 4 && offset.y >= 4))
+    .toBe(true);
+});
+
 test("shared model filter applies to the chart and table", async ({ page }) => {
   await routeFeed(page);
   await page.goto("/");

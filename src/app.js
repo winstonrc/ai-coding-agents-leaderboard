@@ -16,6 +16,12 @@ import {
   normalizePriorities,
   rankConfigurations,
 } from "./scoring/v1.js";
+import {
+  pointInsideRectangle,
+  rectangleOverlapArea,
+  segmentIntersectsRectangle,
+  segmentsIntersect,
+} from "./chart-geometry.js";
 
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
@@ -233,8 +239,8 @@ async function loadFeed() {
     state.fetchedAt = result.fetchedAt;
     renderModelFilter();
     renderProvenance();
-    render();
     setSuccessStatus(state.feed.configurations.length);
+    render();
   } catch (error) {
     state.feed = null;
     if (error instanceof FeedValidationError) {
@@ -547,21 +553,140 @@ function isFiniteChartConfiguration(configuration) {
     && Number.isFinite(configuration.relativeValue);
 }
 
-function distributeChartLabels(labels, minimumY, maximumY, gap) {
-  const sorted = labels.sort((left, right) => left.desiredY - right.desiredY);
-  let nextY = minimumY;
-  for (const label of sorted) {
-    label.y = Math.max(label.desiredY, nextY);
-    nextY = label.y + gap;
-  }
+function connectorEnd(point, rectangle) {
+  const edge = {
+    x: Math.max(rectangle.left, Math.min(point.x, rectangle.right)),
+    y: Math.max(rectangle.top, Math.min(point.y, rectangle.bottom)),
+  };
+  const center = {
+    x: (rectangle.left + rectangle.right) / 2,
+    y: (rectangle.top + rectangle.bottom) / 2,
+  };
+  const distance = Math.hypot(center.x - edge.x, center.y - edge.y);
+  if (distance === 0) return edge;
+  const inset = Math.min(5, distance);
+  return {
+    x: edge.x + (center.x - edge.x) / distance * inset,
+    y: edge.y + (center.y - edge.y) / distance * inset,
+  };
+}
 
-  if (sorted.at(-1)?.y > maximumY) {
-    sorted.at(-1).y = maximumY;
-    for (let index = sorted.length - 2; index >= 0; index -= 1) {
-      sorted[index].y = Math.min(sorted[index].y, sorted[index + 1].y - gap);
-    }
-  }
-  return sorted;
+function labelRectangles(point, width, height, bounds) {
+  const positions = [16, 28, 40, 52].flatMap((offset) => [
+    { left: point.x + offset, top: point.y - offset - height },
+    { left: point.x + offset, top: point.y - height / 2 },
+    { left: point.x + offset, top: point.y + offset },
+    { left: point.x - width / 2, top: point.y + offset },
+    { left: point.x - offset - width, top: point.y + offset },
+    { left: point.x - offset - width, top: point.y - height / 2 },
+    { left: point.x - offset - width, top: point.y - offset - height },
+    { left: point.x - width / 2, top: point.y - offset - height },
+  ]);
+  return positions.map((position, index) => {
+    const left = Math.max(
+      bounds.left,
+      Math.min(position.left, bounds.right - width),
+    );
+    const top = Math.max(
+      bounds.top,
+      Math.min(position.top, bounds.bottom - height),
+    );
+    return {
+      bottom: top + height,
+      index,
+      left,
+      right: left + width,
+      top,
+    };
+  });
+}
+
+function chooseLabelRectangle({
+  bounds,
+  height,
+  occupiedConnectors,
+  occupiedLabels,
+  point,
+  points,
+  segments,
+  width,
+}) {
+  return labelRectangles(point, width, height, bounds)
+    .map((rectangle) => {
+      const connector = connectorEnd(point, rectangle);
+      const connectorSegment = { start: point, end: connector };
+      const coversTarget = pointInsideRectangle(point, rectangle, 4) ? 1 : 0;
+      const labelOverlap = occupiedLabels.reduce(
+        (total, placed) => total + rectangleOverlapArea(rectangle, placed, 8),
+        0,
+      );
+      const pointOverlaps = points.filter(
+        (candidate) => candidate !== point
+          && pointInsideRectangle(candidate, rectangle, 7),
+      ).length;
+      const lineIntersections = segments.filter(
+        (segment) => segmentIntersectsRectangle(
+          segment.start,
+          segment.end,
+          rectangle,
+          2,
+        ),
+      ).length;
+      const labelConnectorIntersections = occupiedConnectors.filter(
+        (placed) => segmentIntersectsRectangle(
+          placed.start,
+          placed.end,
+          rectangle,
+          2,
+        ),
+      ).length;
+      const connectorLabelIntersections = occupiedLabels.filter(
+        (placed) => segmentIntersectsRectangle(
+          connectorSegment.start,
+          connectorSegment.end,
+          placed,
+          2,
+        ),
+      ).length;
+      const connectorIntersections = occupiedConnectors.filter(
+        (placed) => segmentsIntersect(
+          connectorSegment.start,
+          connectorSegment.end,
+          placed.start,
+          placed.end,
+        ),
+      ).length;
+      const connectorObstructions = labelConnectorIntersections
+        + connectorLabelIntersections
+        + connectorIntersections;
+      const axisAlignedConnector = (
+        Math.abs(connector.x - point.x) < 4
+        || Math.abs(connector.y - point.y) < 4
+      ) ? 1 : 0;
+      return {
+        connector,
+        connectorSegment,
+        rectangle,
+        score: [
+          coversTarget,
+          labelOverlap,
+          pointOverlaps,
+          lineIntersections,
+          connectorObstructions,
+          axisAlignedConnector,
+          Math.hypot(connector.x - point.x, connector.y - point.y),
+          rectangle.index,
+        ],
+      };
+    })
+    .sort((left, right) => {
+      for (let index = 0; index < left.score.length; index += 1) {
+        if (left.score[index] !== right.score[index]) {
+          return left.score[index] - right.score[index];
+        }
+      }
+      return 0;
+    })[0];
 }
 
 function niceStep(maximum, targetIntervals = 6) {
@@ -714,6 +839,7 @@ function renderChart(configurations) {
   );
   elements.chart.append(crosshair);
 
+  const seriesSegments = [];
   for (const [key, group] of sortedGroups) {
     const sorted = group.sort((left, right) => {
       const leftOrder = EFFORT_ORDER.get(left.reasoningEffort) ?? 6;
@@ -721,6 +847,18 @@ function renderChart(configurations) {
       return leftOrder - rightOrder || left.config.localeCompare(right.config);
     });
     if (sorted.length >= 2) {
+      for (let index = 1; index < sorted.length; index += 1) {
+        seriesSegments.push({
+          start: {
+            x: x(sorted[index - 1].amortizedCostPerPassUsd),
+            y: y(sorted[index - 1].amortizedAgentTimePerPassMinutes),
+          },
+          end: {
+            x: x(sorted[index].amortizedCostPerPassUsd),
+            y: y(sorted[index].amortizedAgentTimePerPassMinutes),
+          },
+        });
+      }
       const path = sorted
         .map((configuration, index) => {
           const command = index === 0 ? "M" : "L";
@@ -801,89 +939,101 @@ function renderChart(configurations) {
     elements.chart.append(markerGroup);
   }
 
-  const labelGroups = { start: [], end: [] };
-  for (const [key, group] of sortedGroups) {
-    const representative = group.reduce((best, candidate) => {
+  const representatives = sortedGroups
+    .map(([, group]) => group.reduce((best, candidate) => {
       if (candidate.score !== best.score) {
         return candidate.score > best.score ? candidate : best;
       }
       return candidate.config.localeCompare(best.config) < 0 ? candidate : best;
-    });
-    const xPosition = x(representative.amortizedCostPerPassUsd);
-    const yPosition = y(representative.amortizedAgentTimePerPassMinutes);
-    const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
-    labelGroups[anchor].push({
-      key,
-      representative,
-      xPosition,
-      yPosition,
-      desiredY: yPosition < margin.top + 50 ? yPosition + 24 : yPosition - 18,
-      anchor,
-    });
-  }
-
-  const labels = [
-    ...distributeChartLabels(
-      labelGroups.start,
-      margin.top + 10,
-      margin.top + height - 22,
-      34,
-    ),
-    ...distributeChartLabels(
-      labelGroups.end,
-      margin.top + 10,
-      margin.top + height - 22,
-      34,
-    ),
-  ];
-  const defaultLabelPositions = new Map(
-    labels.map((entry) => [entry.representative.config, entry]),
+    }))
+    .sort((left, right) => (
+      right.score - left.score || left.config.localeCompare(right.config)
+    ));
+  const representativeConfigs = new Set(
+    representatives.map((configuration) => configuration.config),
   );
+  const labelConfigurations = [
+    ...representatives,
+    ...finite
+      .filter((configuration) => !representativeConfigs.has(configuration.config))
+      .sort((left, right) => left.config.localeCompare(right.config)),
+  ];
+  const points = finite.map((configuration) => ({
+    config: configuration.config,
+    x: x(configuration.amortizedCostPerPassUsd),
+    y: y(configuration.amortizedAgentTimePerPassMinutes),
+  }));
+  const pointsByConfig = new Map(points.map((point) => [point.config, point]));
+  const occupiedConnectors = [];
+  const occupiedLabels = [];
+  const labelBounds = {
+    bottom: margin.top + height,
+    left: margin.left,
+    right: margin.left + width,
+    top: margin.top,
+  };
 
-  for (const configuration of finite) {
+  for (const configuration of labelConfigurations) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-    const xPosition = x(configuration.amortizedCostPerPassUsd);
-    const yPosition = y(configuration.amortizedAgentTimePerPassMinutes);
-    const defaultPosition = defaultLabelPositions.get(configuration.config);
-    const anchor = defaultPosition?.anchor
-      ?? (xPosition > margin.left + width * 0.5 ? "end" : "start");
-    const labelX = anchor === "end" ? xPosition - 16 : xPosition + 16;
-    const labelY = defaultPosition?.y
-      ?? (yPosition < margin.top + 30 ? yPosition + 24 : yPosition - 22);
-    const labelBelowPoint = labelY > yPosition;
+    const point = pointsByConfig.get(configuration.config);
+    const defaultVisible = representativeConfigs.has(configuration.config);
     const pointLabel = createSvgElement("g", {
       class: `chart-point-label chart-series chart-series-${seriesIndex}`,
       "data-chart-group": groupId,
       "data-config": configuration.config,
-      "data-default-visible": Boolean(defaultPosition),
+      "data-default-visible": defaultVisible,
       "aria-hidden": "true",
     });
-    pointLabel.append(createSvgElement("line", {
-      x1: xPosition,
-      y1: yPosition,
-      x2: anchor === "end" ? labelX + 3 : labelX - 3,
-      y2: labelBelowPoint ? labelY - 12 : labelY + 5,
-      class: "chart-label-connector",
-    }));
     const label = createSvgElement("text", {
-      x: labelX,
-      y: labelY,
-      "text-anchor": anchor,
+      x: 0,
+      y: 0,
       class: "chart-label",
     });
-    const modelName = createSvgElement("tspan", { x: label.getAttribute("x") });
+    const modelName = createSvgElement("tspan", { x: 0 });
     modelName.textContent = configuration.model;
     const effort = createSvgElement("tspan", {
-      x: label.getAttribute("x"),
+      x: 0,
       dy: 12,
       class: "chart-effort-label",
     });
     effort.textContent = (configuration.reasoningEffort ?? "default").toUpperCase();
     label.append(modelName, effort);
+    label.style.opacity = "0";
+    elements.chart.append(label);
+    const textBounds = label.getBBox();
+    label.remove();
+    label.style.removeProperty("opacity");
     pointLabel.append(label);
     elements.chart.append(pointLabel);
+    const placement = chooseLabelRectangle({
+      bounds: labelBounds,
+      height: textBounds.height,
+      occupiedConnectors: defaultVisible ? occupiedConnectors : [],
+      occupiedLabels: defaultVisible ? occupiedLabels : [],
+      point,
+      points,
+      segments: seriesSegments,
+      width: textBounds.width,
+    });
+    const textX = placement.rectangle.left - textBounds.x;
+    const textY = placement.rectangle.top - textBounds.y;
+    label.setAttribute("x", textX);
+    label.setAttribute("y", textY);
+    modelName.setAttribute("x", textX);
+    effort.setAttribute("x", textX);
+    pointLabel.prepend(createSvgElement("line", {
+      x1: point.x,
+      y1: point.y,
+      x2: placement.connector.x,
+      y2: placement.connector.y,
+      class: "chart-label-connector",
+    }));
+    if (defaultVisible) {
+      occupiedConnectors.push(placement.connectorSegment);
+      occupiedLabels.push(placement.rectangle);
+    }
   }
 }
 
