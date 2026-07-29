@@ -116,6 +116,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "Amortized time",
     "Task coverage",
   ]);
+  await expect(page.locator("#leaderboard-body td").first())
+    .toHaveCSS("vertical-align", "top");
+  await expect(page.locator(".configuration-detail").first()).toHaveCSS(
+    "display",
+    test.info().project.name === "mobile-320" ? "none" : "block",
+  );
+  await expect(page.locator(".secondary-metric").first()).toHaveCSS(
+    "display",
+    test.info().project.name === "mobile-320" ? "none" : "block",
+  );
   await expect(page.getByRole("columnheader", {
     name: "Relative value compared with the overall eligible leader",
   })).toHaveAttribute(
