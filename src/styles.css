@@ -1,7 +1,7 @@
 /* SPDX-License-Identifier: MPL-2.0 */
 
 :root {
-  color-scheme: light dark;
+  color-scheme: light;
   font-family: Verdana, sans-serif;
   line-height: 1.5;
 }
@@ -230,6 +230,7 @@ input[type="range"] {
 
 .chart-wrap {
   position: relative;
+  overflow-x: auto;
 }
 
 .value-chart {
@@ -241,8 +242,9 @@ input[type="range"] {
 
 .chart-grid,
 .chart-axis {
-  stroke: #d8d8d8;
+  stroke: CanvasText;
   stroke-width: 1;
+  opacity: 0.18;
   vector-effect: non-scaling-stroke;
 }
 
@@ -281,9 +283,17 @@ input[type="range"] {
   stroke-width: 2;
 }
 
-.chart-point:focus-visible {
+.chart-point-group:focus-visible {
   outline: none;
+}
+
+.chart-point-group:focus-visible .chart-point {
   stroke-width: 4;
+}
+
+.chart-hit-target {
+  fill: transparent;
+  pointer-events: all;
 }
 
 .chart-label {
@@ -358,43 +368,43 @@ input[type="range"] {
 }
 
 .chart-series-0 {
-  color: #d97735;
+  color: #b45309;
 }
 
 .chart-series-1 {
-  color: #2f9d61;
+  color: #047857;
 }
 
 .chart-series-2 {
-  color: #3078c9;
+  color: #1d4ed8;
 }
 
 .chart-series-3 {
-  color: #d64550;
+  color: #be123c;
 }
 
 .chart-series-4 {
-  color: #7a65b3;
+  color: #6d28d9;
 }
 
 .chart-series-5 {
-  color: #9b6a4a;
+  color: #92400e;
 }
 
 .chart-series-6 {
-  color: #138c8c;
+  color: #0f766e;
 }
 
 .chart-series-7 {
-  color: #c28300;
+  color: #854d0e;
 }
 
 .chart-series-8 {
-  color: #6f6f6f;
+  color: #4b5563;
 }
 
 .chart-series-9 {
-  color: #b85b8d;
+  color: #9d174d;
 }
 
 .chart-crosshair-line {
@@ -427,7 +437,13 @@ input[type="range"] {
 
 table {
   width: 100%;
+  min-width: 900px;
   border-collapse: collapse;
+}
+
+th:nth-child(2),
+td:nth-child(2) {
+  min-width: 240px;
 }
 
 th,
@@ -444,8 +460,11 @@ th {
 
 .numeric {
   text-align: right;
-  white-space: nowrap;
   font-variant-numeric: tabular-nums;
+}
+
+td.numeric {
+  white-space: nowrap;
 }
 
 .configuration-detail,
@@ -535,6 +554,10 @@ code {
   .chart-note,
   .chart-label {
     font-size: 16px;
+  }
+
+  .value-chart {
+    min-width: 960px;
   }
 
   .nav-content {

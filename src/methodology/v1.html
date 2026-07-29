@@ -6,7 +6,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'"
     >
     <meta
       name="description"
@@ -40,20 +40,25 @@
         <h2>Definition</h2>
         <div class="formula" aria-label="Formula v1">
           Score<sub>v1</sub> = 100
-          (p / 0.50)<sup>w<sub>p</sub></sup>
           (10 / (c / p))<sup>w<sub>c</sub></sup>
           (40 / (m / p))<sup>w<sub>t</sub></sup>
         </div>
         <p>
-          <var>p</var> is Pass@1 (first-attempt success rate), <var>c</var> is mean cost in dollars per attempt,
-          and <var>m</var> is mean duration in minutes per attempt. The three
-          nonnegative priorities are normalized to sum to one. The default priorities
-          are 60% Pass@1, 30% cost per success, and 10% time per success.
+          <var>p</var> is Pass@1 (single-attempt success rate), <var>c</var> is
+          mean cost in dollars per attempt, and <var>m</var> is mean duration in
+          minutes per attempt. The two nonnegative priorities are normalized to
+          sum to one. The defaults are 60% cost per success and 40% cumulative
+          agent time per success.
         </p>
         <p>
-          The anchors describe an index value of 100: 50% Pass@1, $10 expected cost
-          per success, and 40 minutes expected time per success. Anchors affect the
-          displayed scale, not ordering.
+          The anchors describe an index value of 100: $10 expected cost per success
+          and 40 minutes expected cumulative agent time per success. Anchors affect
+          the displayed scale, not ordering.
+        </p>
+        <p>
+          The leaderboard considers only configurations meeting the selected
+          point-estimate Pass@1 floor, which defaults to 60%. This is an eligibility
+          preference, not a statistical confidence threshold.
         </p>
       </section>
 
@@ -75,9 +80,8 @@
       <section>
         <h2>What the priorities mean</h2>
         <p>
-          The controls weight three outcomes, not three independent raw measurements.
-          Cost per success is <var>c / p</var>; time per success is <var>m / p</var>.
-          Expanding the formula gives:
+          Cost per success is <var>c / p</var>; expected cumulative agent time per
+          success is <var>m / p</var>. Expanding the formula gives:
         </p>
         <div class="formula" aria-label="Expanded behavior">
           Score<sub>v1</sub> ∝ p · c<sup>−w<sub>c</sub></sup>
@@ -85,9 +89,10 @@
         </div>
         <p>
           Reliability therefore has an effective elasticity of one: failure affects
-          the success rate, retry cost, and retry time. Increasing Pass@1 priority
-          reduces the raw cost and time penalties; it does not increase reliability
-          elasticity beyond one.
+          both retry-adjusted outcomes. The 60/40 default is an editorial preference
+          that treats percentage improvements in cost as somewhat more important than
+          equal percentage improvements in cumulative time. It is not an empirically
+          calibrated optimum.
         </p>
       </section>
 
@@ -99,11 +104,12 @@
           the severity of a failed result.
         </p>
         <p>
-          Retry-adjusted cost and time assume comparable independent attempts and
-          detectable success. Correlated or deterministic failures can make those
-          estimates optimistic. Upstream exclusions can also produce slightly
-          different task coverage between configurations; the leaderboard keeps
-          those configurations rankable and displays their coverage.
+          Retry-adjusted cost and cumulative time assume comparable sequential
+          independent attempts and detectable success. They are not wall-clock latency
+          estimates for parallel retries. Correlated or deterministic failures can
+          make them optimistic. Upstream exclusions can also produce slightly different
+          task coverage between configurations; the leaderboard keeps those
+          configurations rankable and displays their coverage.
         </p>
       </section>
 
@@ -123,10 +129,6 @@
             Equal scores remain tied. Configuration ID is only the deterministic
             ordering fallback.
           </li>
-          <li>
-            The all-zero priority state is invalid. The interface retains the last
-            valid priorities.
-          </li>
         </ul>
       </section>
 
@@ -134,15 +136,16 @@
         <h2>Pareto frontier</h2>
         <p>
           A configuration is point-estimate Pareto-efficient when no other rankable
-          configuration has at least as high Pass@1, at most as much expected cost
-          per success, and at most as much expected time per success—with at least one
-          strict improvement. This is not statistical dominance.
+          configuration has at most as much expected cost per success and at most as
+          much expected cumulative time per success—with at least one strict
+          improvement. This is not statistical dominance.
         </p>
         <p>
           The chart displays every finite selected configuration above the Pass@1
           floor. The shared model filter limits both chart and table, and the Pareto
-          frontier is recalculated over that selected set. The Pareto control filters
-          only the table.
+          frontier is recalculated over that selected, floor-eligible set. Pareto
+          status therefore means efficient among selected models. The Pareto control
+          filters only the table and is off by default.
         </p>
       </section>
 

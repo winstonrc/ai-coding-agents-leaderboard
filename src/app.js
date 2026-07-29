@@ -3,10 +3,12 @@
 import {
   DATASET_VERSION,
   FeedValidationError,
+  MAX_METADATA_BYTES,
   MAX_RESPONSE_BYTES,
   PUBLISHED_FEED_URL,
   UPSTREAM_SOURCE_URL,
   parseAndValidateFeed,
+  parseAndValidateFeedMetadata,
   readBoundedResponseText,
 } from "./data/validate-feed.js";
 import {
@@ -34,12 +36,8 @@ const elements = {
   statusDetail: document.querySelector("#status-detail"),
   retryButton: document.querySelector("#retry-button"),
   leaderboard: document.querySelector("#leaderboard"),
-  passPriority: document.querySelector("#pass-priority"),
   costPriority: document.querySelector("#cost-priority"),
-  timePriority: document.querySelector("#time-priority"),
-  passPriorityValue: document.querySelector("#pass-priority-value"),
   costPriorityValue: document.querySelector("#cost-priority-value"),
-  timePriorityValue: document.querySelector("#time-priority-value"),
   performanceFloor: document.querySelector("#performance-floor"),
   performanceFloorValue: document.querySelector("#performance-floor-value"),
   modelFilterSummary: document.querySelector("#model-filter-summary"),
@@ -62,11 +60,10 @@ const state = {
   feed: null,
   fetchedAt: null,
   priorities: { ...FORMULA_V1.defaultPriorities },
-  lastValidPriorities: { ...FORMULA_V1.defaultPriorities },
   performanceFloor: 0.6,
   selectedModelKeys: new Set(),
   sortBy: "value",
-  paretoOnly: true,
+  paretoOnly: false,
 };
 
 function appendText(parent, tagName, text, className) {
@@ -200,17 +197,27 @@ async function fetchFeed() {
       signal: controller.signal,
     });
     if (!metadataResponse.ok) {
-      throw new Error(`Feed metadata returned HTTP ${metadataResponse.status}.`);
+      throw new FeedValidationError(
+        `Feed metadata returned HTTP ${metadataResponse.status}.`,
+      );
     }
-    const metadata = await metadataResponse.json();
+    const metadataContentLength = Number(metadataResponse.headers.get("content-length"));
     if (
-      !metadata
-      || typeof metadata.fetched_at !== "string"
-      || Number.isNaN(new Date(metadata.fetched_at).getTime())
+      Number.isFinite(metadataContentLength)
+      && metadataContentLength > MAX_METADATA_BYTES
     ) {
-      throw new FeedValidationError("Feed metadata has an invalid fetched_at timestamp.");
+      throw new FeedValidationError(`Response exceeds ${MAX_METADATA_BYTES} bytes.`);
     }
-    return { feed, fetchedAt: metadata.fetched_at };
+    const metadataContentType = metadataResponse.headers.get("content-type") ?? "";
+    if (!metadataContentType.toLowerCase().includes("application/json")) {
+      throw new FeedValidationError("Feed metadata content type is not JSON.");
+    }
+    const metadataText = await readBoundedResponseText(
+      metadataResponse,
+      MAX_METADATA_BYTES,
+    );
+    const metadata = parseAndValidateFeedMetadata(metadataText);
+    return { feed, fetchedAt: metadata.fetchedAt };
   } finally {
     window.clearTimeout(timeout);
   }
@@ -311,35 +318,25 @@ function renderModelFilter() {
   updateModelFilterSummary(options.length);
 }
 
-function readPriorities(changedKey) {
-  const values = {
-    passAt1: Number(elements.passPriority.value),
-    costPerSuccess: Number(elements.costPriority.value),
-    timePerSuccess: Number(elements.timePriority.value),
+function readPriorities() {
+  const costPerSuccess = Number(elements.costPriority.value);
+  state.priorities = {
+    costPerSuccess,
+    timePerSuccess: 100 - costPerSuccess,
   };
-
-  if (Object.values(values).every((value) => value === 0)) {
-    const restored = state.lastValidPriorities[changedKey];
-    values[changedKey] = restored > 0 ? restored : 1;
-    const input = {
-      passAt1: elements.passPriority,
-      costPerSuccess: elements.costPriority,
-      timePerSuccess: elements.timePriority,
-    }[changedKey];
-    input.value = String(values[changedKey]);
-  }
-
-  state.priorities = values;
-  state.lastValidPriorities = { ...values };
   renderPriorityOutputs();
   render();
 }
 
 function renderPriorityOutputs() {
   const normalized = normalizePriorities(state.priorities);
-  elements.passPriorityValue.textContent = formatPercent(normalized.passAt1, 0);
-  elements.costPriorityValue.textContent = formatPercent(normalized.costPerSuccess, 0);
-  elements.timePriorityValue.textContent = formatPercent(normalized.timePerSuccess, 0);
+  elements.costPriorityValue.textContent = `${
+    formatPercent(normalized.costPerSuccess, 0)
+  } cost · ${formatPercent(normalized.timePerSuccess, 0)} time`;
+  elements.costPriority.setAttribute(
+    "aria-valuetext",
+    elements.costPriorityValue.textContent,
+  );
 }
 
 function primaryValue(configuration) {
@@ -403,6 +400,9 @@ function renderTable(configurations) {
       `median attempt ${Number.isFinite(configuration.medianDurationSeconds) ? formatDuration(configuration.medianDurationSeconds / 60) : "—"}`,
       `note ${configuration.note ?? "—"}`,
     ];
+    if (configuration.paretoEfficient) {
+      details.push("Pareto-efficient among selected models");
+    }
     appendText(nameCell, "span", details.join(" · "), "configuration-detail");
     if (configuration.tasksAttempted < configuration.tasksInSet) {
       appendText(nameCell, "span", "Partial task coverage", "coverage-warning");
@@ -418,14 +418,6 @@ function renderTable(configurations) {
         ? formatRelativeValue(configuration.relativeValue)
         : "Unpriced",
       "relative-value",
-    );
-    appendText(
-      valueCell,
-      "span",
-      Number.isFinite(configuration.score)
-        ? `Formula v1 index ${configuration.score.toFixed(1)}`
-        : "Formula v1 index —",
-      "secondary-metric",
     );
     row.append(valueCell);
 
@@ -456,8 +448,18 @@ function clearChart() {
 }
 
 function markerDetails(configuration) {
-  const status = configuration.paretoEfficient ? "Pareto-efficient" : "Not Pareto-efficient";
-  return `${configurationName(configuration)} — ${formatRelativeValue(configuration.relativeValue)} relative value, ${formatPercent(configuration.passAt1)} first-attempt success, ${formatCurrency(configuration.expectedCostUsd)} expected cost per success, ${formatDuration(configuration.expectedTimeMinutes)} expected time per success, Formula v1 index ${configuration.score.toFixed(1)}. ${status}.`;
+  const status = configuration.paretoEfficient
+    ? "Pareto-efficient among selected models"
+    : "Not Pareto-efficient among selected models";
+  return `${configurationName(configuration)} — ${
+    formatRelativeValue(configuration.relativeValue)
+  } relative to the overall eligible leader, ${
+    formatPercent(configuration.passAt1)
+  } single-attempt success, ${
+    formatCurrency(configuration.expectedCostUsd)
+  } expected cost per success, ${
+    formatDuration(configuration.expectedTimeMinutes)
+  } expected cumulative agent time per success. ${status}.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {
@@ -477,12 +479,12 @@ function showChartDetails(configuration, marker, groupId) {
   const horizontal = crosshair.querySelector(".chart-crosshair-horizontal");
   horizontal.setAttribute("y1", yPosition);
   horizontal.setAttribute("y2", yPosition);
-  const successLabel = crosshair.querySelector(".chart-crosshair-success");
-  successLabel.setAttribute("x", xPosition);
-  successLabel.textContent = formatPercent(configuration.passAt1);
-  const valueLabel = crosshair.querySelector(".chart-crosshair-value");
-  valueLabel.setAttribute("y", String(Number(yPosition) + 4));
-  valueLabel.textContent = formatRelativeValue(configuration.relativeValue);
+  const costLabel = crosshair.querySelector(".chart-crosshair-cost");
+  costLabel.setAttribute("x", xPosition);
+  costLabel.textContent = formatCurrency(configuration.expectedCostUsd);
+  const timeLabel = crosshair.querySelector(".chart-crosshair-time");
+  timeLabel.setAttribute("y", String(Number(yPosition) + 4));
+  timeLabel.textContent = formatDuration(configuration.expectedTimeMinutes);
 
   const callout = elements.chart.querySelector(".chart-hover-label");
   const connector = callout.querySelector("line");
@@ -549,6 +551,15 @@ function distributeChartLabels(labels, minimumY, maximumY, gap) {
   return sorted;
 }
 
+function niceStep(maximum, targetIntervals = 6) {
+  if (!Number.isFinite(maximum) || maximum <= 0) return 1;
+  const rawStep = maximum / targetIntervals;
+  const magnitude = 10 ** Math.floor(Math.log10(rawStep));
+  const normalized = rawStep / magnitude;
+  const factor = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
+  return factor * magnitude;
+}
+
 function renderChart(configurations) {
   clearChart();
   const finite = configurations.filter(isFiniteChartConfiguration);
@@ -567,46 +578,25 @@ function renderChart(configurations) {
   const margin = { top: 28, right: 34, bottom: 62, left: 68 };
   const width = 960 - margin.left - margin.right;
   const height = 430 - margin.top - margin.bottom;
-  const successInterval = 0.1;
-  let minimumSuccess = Math.max(
-    0,
-    Math.floor(
-      (
-        Math.min(...finite.map((configuration) => configuration.passAt1))
-        + 1e-9
-      )
-        / successInterval,
-    ) * successInterval,
+  const maximumCost = Math.max(
+    ...finite.map((configuration) => configuration.expectedCostUsd),
   );
-  const maximumSuccess = Math.min(
-    1,
-    Math.max(
-      minimumSuccess + 0.2,
-      Math.ceil(
-        (
-          Math.max(...finite.map((configuration) => configuration.passAt1))
-          - 1e-9
-        )
-          / successInterval,
-      ) * successInterval,
-    ),
+  const maximumTime = Math.max(
+    ...finite.map((configuration) => configuration.expectedTimeMinutes),
   );
-  if (minimumSuccess >= maximumSuccess) {
-    minimumSuccess = Math.max(0, maximumSuccess - successInterval);
-  }
-  const successTickCount = Math.round(
-    (maximumSuccess - minimumSuccess) / successInterval,
-  );
-  const relativeValueInterval = 0.1;
-  const relativeValueTickCount = 1 / relativeValueInterval;
-  const x = (passAt1) => margin.left
-    + width * (passAt1 - minimumSuccess) / (maximumSuccess - minimumSuccess);
-  const y = (relativeValue) => margin.top + height * (1 - relativeValue);
+  const costStep = niceStep(maximumCost);
+  const timeStep = niceStep(maximumTime);
+  const costMaximum = Math.ceil(maximumCost / costStep) * costStep;
+  const timeMaximum = Math.ceil(maximumTime / timeStep) * timeStep;
+  const costTickCount = Math.round(costMaximum / costStep);
+  const timeTickCount = Math.round(timeMaximum / timeStep);
+  const x = (cost) => margin.left + width * cost / costMaximum;
+  const y = (time) => margin.top + height * (1 - time / timeMaximum);
 
   const grid = createSvgElement("g");
-  for (let index = 0; index <= successTickCount; index += 1) {
-    const successRate = minimumSuccess + successInterval * index;
-    const xPosition = x(successRate);
+  for (let index = 0; index <= costTickCount; index += 1) {
+    const cost = costStep * index;
+    const xPosition = x(cost);
     grid.append(createSvgElement("line", {
       x1: xPosition,
       x2: xPosition,
@@ -618,14 +608,18 @@ function renderChart(configurations) {
       x: xPosition,
       y: margin.top + height + 25,
       "text-anchor": "middle",
-      class: "chart-tick chart-success-tick",
+      class: "chart-tick chart-cost-tick",
     });
-    label.textContent = formatPercent(successRate, 0);
+    label.textContent = new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: "USD",
+      maximumFractionDigits: costStep < 1 ? 1 : 0,
+    }).format(cost);
     grid.append(label);
   }
-  for (let index = 0; index <= relativeValueTickCount; index += 1) {
-    const relativeValue = relativeValueInterval * index;
-    const yPosition = y(relativeValue);
+  for (let index = 0; index <= timeTickCount; index += 1) {
+    const time = timeStep * index;
+    const yPosition = y(time);
     grid.append(createSvgElement("line", {
       x1: margin.left,
       x2: margin.left + width,
@@ -637,9 +631,9 @@ function renderChart(configurations) {
       x: margin.left - 12,
       y: yPosition + 4,
       "text-anchor": "end",
-      class: "chart-tick chart-value-tick",
+      class: "chart-tick chart-time-tick",
     });
-    label.textContent = `${relativeValue.toFixed(1)}×`;
+    label.textContent = `${formatNumber(time)} min`;
     grid.append(label);
   }
   elements.chart.append(grid);
@@ -650,7 +644,7 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  xLabel.textContent = "First-attempt success rate";
+  xLabel.textContent = "Expected cost per success";
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
@@ -660,16 +654,16 @@ function renderChart(configurations) {
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Relative value (leader = 1.00×)";
+  yLabel.textContent = "Expected cumulative agent time per success";
   elements.chart.append(yLabel);
 
   const efficiencyLabel = createSvgElement("text", {
-    x: margin.left + width - 8,
-    y: margin.top + 18,
-    "text-anchor": "end",
+    x: margin.left + 8,
+    y: margin.top + height - 10,
+    "text-anchor": "start",
     class: "chart-efficiency-label",
   });
-  efficiencyLabel.textContent = "higher overall value ↑";
+  efficiencyLabel.textContent = "more efficient ↙";
   elements.chart.append(efficiencyLabel);
 
   const groups = new Map();
@@ -704,12 +698,12 @@ function renderChart(configurations) {
     createSvgElement("text", {
       y: margin.top + height + 25,
       "text-anchor": "middle",
-      class: "chart-crosshair-label chart-crosshair-success",
+      class: "chart-crosshair-label chart-crosshair-cost",
     }),
     createSvgElement("text", {
       x: margin.left - 12,
       "text-anchor": "end",
-      class: "chart-crosshair-label chart-crosshair-value",
+      class: "chart-crosshair-label chart-crosshair-time",
     }),
   );
   elements.chart.append(crosshair);
@@ -724,7 +718,9 @@ function renderChart(configurations) {
       const path = sorted
         .map((configuration, index) => {
           const command = index === 0 ? "M" : "L";
-          return `${command}${x(configuration.passAt1)},${y(configuration.relativeValue)}`;
+          return `${command}${x(configuration.expectedCostUsd)},${
+            y(configuration.expectedTimeMinutes)
+          }`;
         })
         .join(" ");
       const seriesIndex = Number(groupIdentifiers.get(key)) % CHART_SERIES_COUNT;
@@ -740,9 +736,9 @@ function renderChart(configurations) {
     const key = `${configuration.harness}\u0000${configuration.model}`;
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
-    const xPosition = x(configuration.passAt1);
-    const yPosition = y(configuration.relativeValue);
-    const marker = configuration.paretoEfficient
+    const xPosition = x(configuration.expectedCostUsd);
+    const yPosition = y(configuration.expectedTimeMinutes);
+    const visibleMarker = configuration.paretoEfficient
       ? createSvgElement("rect", {
         x: xPosition - 5,
         y: yPosition - 5,
@@ -756,37 +752,54 @@ function renderChart(configurations) {
         r: 5,
       });
 
-    marker.setAttribute(
+    visibleMarker.setAttribute(
       "class",
       configuration.paretoEfficient
         ? `chart-point chart-point-pareto chart-series chart-series-${seriesIndex}`
         : `chart-point chart-series chart-series-${seriesIndex}`,
     );
-    marker.setAttribute("data-chart-group", groupId);
-    marker.setAttribute("data-chart-x", String(xPosition));
-    marker.setAttribute("data-chart-y", String(yPosition));
-    marker.setAttribute("data-config", configuration.config);
-    marker.setAttribute("tabindex", "0");
-    marker.setAttribute("role", "img");
-    marker.setAttribute("aria-label", markerDetails(configuration));
-    marker.addEventListener(
+    visibleMarker.dataset.chartGroup = groupId;
+    visibleMarker.setAttribute("aria-hidden", "true");
+    visibleMarker.setAttribute("pointer-events", "none");
+
+    const markerGroup = createSvgElement("g", {
+      class: "chart-point-group",
+      "data-chart-group": groupId,
+      "data-chart-x": xPosition,
+      "data-chart-y": yPosition,
+      "data-config": configuration.config,
+      tabindex: 0,
+      role: "img",
+      "aria-label": markerDetails(configuration),
+    });
+    markerGroup.append(
+      createSvgElement("circle", {
+        cx: xPosition,
+        cy: yPosition,
+        r: 16,
+        class: "chart-hit-target",
+        "aria-hidden": "true",
+      }),
+      visibleMarker,
+    );
+    markerGroup.addEventListener(
       "mouseenter",
-      () => showChartDetails(configuration, marker, groupId),
+      () => showChartDetails(configuration, markerGroup, groupId),
     );
-    marker.addEventListener("mouseleave", hideChartDetails);
-    marker.addEventListener(
+    markerGroup.addEventListener("mouseleave", hideChartDetails);
+    markerGroup.addEventListener(
       "focus",
-      () => showChartDetails(configuration, marker, groupId),
+      () => showChartDetails(configuration, markerGroup, groupId),
     );
-    marker.addEventListener("blur", hideChartDetails);
-    elements.chart.append(marker);
+    markerGroup.addEventListener("blur", hideChartDetails);
+    elements.chart.append(markerGroup);
   }
 
   const labelGroups = { start: [], end: [] };
   for (const [key, group] of sortedGroups) {
     const representative = group[Math.floor((group.length - 1) / 2)];
-    const xPosition = x(representative.passAt1);
-    const yPosition = y(representative.relativeValue);
+    const xPosition = x(representative.expectedCostUsd);
+    const yPosition = y(representative.expectedTimeMinutes);
     const anchor = xPosition > margin.left + width * 0.5 ? "end" : "start";
     labelGroups[anchor].push({
       key,
@@ -895,11 +908,11 @@ function render() {
     ? Math.max(...floorReference.map((configuration) => configuration.score))
     : null;
   const selectedConfigurations = state.feed.configurations.filter(
-    (configuration) => state.selectedModelKeys.has(modelKey(configuration)),
+    (configuration) => state.selectedModelKeys.has(modelKey(configuration))
+      && configuration.passAt1 >= state.performanceFloor,
   );
   const scored = rankConfigurations(selectedConfigurations, state.priorities);
   const floorEligible = scored
-    .filter((configuration) => configuration.passAt1 >= state.performanceFloor)
     .map((configuration) => ({
       ...configuration,
       relativeValue: Number.isFinite(highestScore) && highestScore > 0
@@ -928,9 +941,7 @@ function validateFormulaSelector() {
   return false;
 }
 
-elements.passPriority.addEventListener("input", () => readPriorities("passAt1"));
-elements.costPriority.addEventListener("input", () => readPriorities("costPerSuccess"));
-elements.timePriority.addEventListener("input", () => readPriorities("timePerSuccess"));
+elements.costPriority.addEventListener("input", readPriorities);
 elements.performanceFloor.addEventListener("input", () => {
   state.performanceFloor = Number(elements.performanceFloor.value) / 100;
   elements.performanceFloorValue.textContent = `≥${elements.performanceFloor.value}%`;

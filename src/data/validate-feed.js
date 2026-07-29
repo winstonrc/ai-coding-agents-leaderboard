@@ -4,6 +4,7 @@ export const UPSTREAM_SOURCE_URL = "https://deepswe.datacurve.ai/artifacts/v1.1/
 export const PUBLISHED_FEED_URL = "./data/leaderboard-v1.1.json";
 export const DATASET_VERSION = "v1.1";
 export const MAX_RESPONSE_BYTES = 2 * 1024 * 1024;
+export const MAX_METADATA_BYTES = 1_024;
 export const MAX_ROWS = 1_000;
 export const MAX_EXTERNAL_STRING_LENGTH = 200;
 
@@ -83,7 +84,7 @@ function requiredTimestamp(value, field) {
   return timestamp;
 }
 
-export async function readBoundedResponseText(response) {
+export async function readBoundedResponseText(response, maxBytes = MAX_RESPONSE_BYTES) {
   if (!response.body) {
     throw new FeedValidationError("Response body is unavailable.");
   }
@@ -97,14 +98,42 @@ export async function readBoundedResponseText(response) {
     const { done, value } = await reader.read();
     if (done) break;
     responseBytes += value.byteLength;
-    if (responseBytes > MAX_RESPONSE_BYTES) {
+    if (responseBytes > maxBytes) {
       await reader.cancel();
-      throw new FeedValidationError(`Response exceeds ${MAX_RESPONSE_BYTES} bytes.`);
+      throw new FeedValidationError(`Response exceeds ${maxBytes} bytes.`);
     }
     parts.push(decoder.decode(value, { stream: true }));
   }
   parts.push(decoder.decode());
   return parts.join("");
+}
+
+export function parseAndValidateFeedMetadata(text) {
+  const responseBytes = new TextEncoder().encode(text).byteLength;
+  if (responseBytes > MAX_METADATA_BYTES) {
+    throw new FeedValidationError(`Response exceeds ${MAX_METADATA_BYTES} bytes.`);
+  }
+
+  let metadata;
+  try {
+    metadata = JSON.parse(text);
+  } catch {
+    throw new FeedValidationError("Feed metadata is not valid JSON.");
+  }
+
+  if (!metadata || typeof metadata !== "object" || Array.isArray(metadata)) {
+    throw new FeedValidationError("Feed metadata root must be an object.");
+  }
+  if (
+    Object.keys(metadata).length !== 1
+    || !Object.prototype.hasOwnProperty.call(metadata, "fetched_at")
+  ) {
+    throw new FeedValidationError("Feed metadata must contain only fetched_at.");
+  }
+
+  return {
+    fetchedAt: requiredTimestamp(metadata.fetched_at, "fetched_at"),
+  };
 }
 
 export function parseAndValidateFeed(text) {

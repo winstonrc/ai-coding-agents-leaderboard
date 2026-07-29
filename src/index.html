@@ -6,17 +6,17 @@
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <meta
       http-equiv="Content-Security-Policy"
-      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'; frame-ancestors 'none'"
+      content="default-src 'self'; script-src 'self'; style-src 'self'; connect-src 'self'; img-src 'self' data:; object-src 'none'; base-uri 'none'"
     >
     <meta
       name="description"
-      content="Compare AI coding agents by first-attempt success rate, cost, and speed."
+      content="Compare AI coding agents by expected cost and cumulative time per successful result."
     >
     <meta property="og:type" content="website">
     <meta property="og:title" content="AI Coding Agents Leaderboard">
     <meta
       property="og:description"
-      content="Compare coding-agent value using first-attempt success rate, expected cost per success, and expected time per success."
+      content="Compare coding-agent value using expected cost and cumulative agent time per successful result."
     >
     <meta property="og:url" content="https://winstonrc.github.io/ai-coding-agents-leaderboard/">
     <meta
@@ -25,7 +25,7 @@
     >
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="AI coding agents relative value and first-attempt success chart">
+    <meta property="og:image:alt" content="AI coding agents expected cost and cumulative time per success chart">
     <meta name="twitter:card" content="summary_large_image">
     <meta
       name="twitter:image"
@@ -50,8 +50,8 @@
       <div class="page-width">
         <h1>AI Coding Agents Leaderboard</h1>
         <p class="intro">
-          Compare coding-agent value using first-attempt success rate, expected cost per
-          success, and expected time per success.
+          Compare coding-agent value using expected cost and cumulative agent time per
+          successful result.
         </p>
       </div>
     </header>
@@ -79,31 +79,32 @@
           <div class="section-heading">
             <div>
               <p class="eyebrow">Selected configurations meeting the success floor</p>
-              <h2 id="chart-heading">Value vs. first-attempt success</h2>
+              <h2 id="chart-heading">Cost and cumulative time per success</h2>
             </div>
             <div class="chart-legend" aria-label="Chart legend">
-              <span><i class="legend-marker pareto-marker"></i>Pareto-efficient</span>
+              <span>
+                <i class="legend-marker pareto-marker"></i>Pareto-efficient among selected
+              </span>
               <span><i class="legend-marker"></i>Other</span>
             </div>
           </div>
           <p>
-            Relative value is each configuration’s Formula v1 score divided by
-            the highest eligible score.
+            The table applies the selected cost/time weighting; the chart shows the
+            underlying trade-off. Lower-left is more efficient.
           </p>
           <div class="chart-wrap">
             <svg
               id="value-chart"
               class="value-chart"
               viewBox="0 0 960 430"
-              role="img"
-              aria-label="Relative Formula v1 value versus first-attempt success rate"
+              role="group"
+              aria-label="Expected cost and cumulative agent time per successful result"
               aria-describedby="chart-description"
             >
               <desc id="chart-description">
-                First-attempt success rate appears horizontally. Relative value appears
-                vertically as a ratio to the eligible leader and incorporates success
-                rate, expected cost, and expected time. Diamond points are Pareto-efficient
-                across those three outcomes.
+                Expected cost per success appears horizontally. Expected cumulative agent
+                time per success appears vertically. Points closer to the lower-left are
+                more efficient. Diamonds are Pareto-efficient among selected models.
               </desc>
             </svg>
           </div>
@@ -120,20 +121,18 @@
             <div id="model-options" class="model-options" role="group" aria-label="Visible models"></div>
           </details>
           <div class="priority-grid">
-            <label class="control" for="pass-priority">
-              <span><span>Success rate priority</span><output id="pass-priority-value">60%</output></span>
-              <input id="pass-priority" type="range" min="0" max="100" step="1" value="60">
-            </label>
             <label class="control" for="cost-priority">
-              <span><span>Cost per success priority</span><output id="cost-priority-value">30%</output></span>
-              <input id="cost-priority" type="range" min="0" max="100" step="1" value="30">
-            </label>
-            <label class="control" for="time-priority">
-              <span><span>Time per success priority</span><output id="time-priority-value">10%</output></span>
-              <input id="time-priority" type="range" min="0" max="100" step="1" value="10">
+              <span>
+                <span>Cost priority</span>
+                <output id="cost-priority-value">60% cost · 40% time</output>
+              </span>
+              <input id="cost-priority" type="range" min="0" max="100" step="1" value="60">
             </label>
             <label class="control" for="performance-floor">
-              <span><span>Minimum success rate</span><output id="performance-floor-value">≥60%</output></span>
+              <span>
+                <span>Minimum point-estimate single-attempt success rate</span>
+                <output id="performance-floor-value">≥60%</output>
+              </span>
               <input id="performance-floor" type="range" min="0" max="100" step="1" value="60">
             </label>
           </div>
@@ -157,8 +156,8 @@
               </select>
             </label>
             <label class="switch-control" for="pareto-only">
-              <input id="pareto-only" type="checkbox" checked>
-              <span>Pareto-efficient only</span>
+              <input id="pareto-only" type="checkbox">
+              <span>Pareto-efficient among selected models only</span>
             </label>
             <p id="visible-count" class="visible-count"></p>
           </div>
@@ -166,12 +165,12 @@
             <table>
               <thead>
                 <tr>
-                  <th scope="col">Rank</th>
+                  <th scope="col">Rank among shown</th>
                   <th scope="col">Configuration</th>
-                  <th scope="col" class="numeric">Relative value</th>
-                  <th scope="col" class="numeric">Success rate</th>
+                  <th scope="col" class="numeric">Relative to overall eligible leader</th>
+                  <th scope="col" class="numeric">Single-attempt success rate</th>
                   <th scope="col" class="numeric">Cost / success</th>
-                  <th scope="col" class="numeric">Time / success</th>
+                  <th scope="col" class="numeric">Cumulative time / success</th>
                   <th scope="col" class="numeric">Coverage</th>
                 </tr>
               </thead>
@@ -206,8 +205,8 @@
             </div>
           </dl>
           <p>
-            Expected cost and time assume comparable independent retries and detectable
-            success. Coverage may vary because the source excludes some errors.
+            Expected cost and cumulative time assume comparable sequential retries and
+            detectable success. Coverage may vary because the source excludes some errors.
           </p>
           <p>
             Data published by

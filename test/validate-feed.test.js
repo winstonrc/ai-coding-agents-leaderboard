@@ -4,8 +4,10 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  MAX_METADATA_BYTES,
   MAX_RESPONSE_BYTES,
   parseAndValidateFeed,
+  parseAndValidateFeedMetadata,
   readBoundedResponseText,
 } from "../src/data/validate-feed.js";
 import { feed, feedRow } from "./fixtures.js";
@@ -81,6 +83,28 @@ test("generated_at must be a valid ISO 8601 timestamp", () => {
   );
 });
 
+test("feed metadata requires exactly one valid retrieval timestamp", () => {
+  assert.deepEqual(
+    parseAndValidateFeedMetadata('{"fetched_at":"2026-07-29T16:00:00Z"}'),
+    { fetchedAt: "2026-07-29T16:00:00Z" },
+  );
+  for (const text of [
+    "{}",
+    '{"fetched_at":"July 29, 2026"}',
+    '{"fetched_at":"2026-07-29T16:00:00Z","extra":true}',
+    "[]",
+    "not json",
+  ]) {
+    assert.throws(() => parseAndValidateFeedMetadata(text));
+  }
+  assert.throws(
+    () => parseAndValidateFeedMetadata(
+      JSON.stringify({ fetched_at: "2026-07-29T16:00:00Z", padding: "x".repeat(1_024) }),
+    ),
+    new RegExp(`exceeds ${MAX_METADATA_BYTES}`),
+  );
+});
+
 test("response streaming stops after the byte limit", async () => {
   let cancelled = false;
   const chunk = new Uint8Array(MAX_RESPONSE_BYTES / 2 + 1);
@@ -98,6 +122,20 @@ test("response streaming stops after the byte limit", async () => {
     /Response exceeds/,
   );
   assert.equal(cancelled, true);
+});
+
+test("response streaming accepts a smaller explicit byte limit", async () => {
+  const body = new ReadableStream({
+    start(controller) {
+      controller.enqueue(new Uint8Array(MAX_METADATA_BYTES + 1));
+      controller.close();
+    },
+  });
+
+  await assert.rejects(
+    () => readBoundedResponseText(new Response(body), MAX_METADATA_BYTES),
+    new RegExp(`exceeds ${MAX_METADATA_BYTES}`),
+  );
 });
 
 test("oversized responses and excessive rows fail closed", () => {

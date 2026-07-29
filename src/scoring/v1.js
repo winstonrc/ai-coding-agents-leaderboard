@@ -3,20 +3,17 @@
 export const FORMULA_V1 = Object.freeze({
   id: "v1",
   anchors: Object.freeze({
-    passAt1: 0.5,
     expectedCostUsd: 10,
     expectedTimeMinutes: 40,
   }),
   defaultPriorities: Object.freeze({
-    passAt1: 60,
-    costPerSuccess: 30,
-    timePerSuccess: 10,
+    costPerSuccess: 60,
+    timePerSuccess: 40,
   }),
 });
 
 export function normalizePriorities(priorities) {
   const values = [
-    priorities.passAt1,
     priorities.costPerSuccess,
     priorities.timePerSuccess,
   ];
@@ -31,7 +28,6 @@ export function normalizePriorities(priorities) {
   }
 
   return {
-    passAt1: priorities.passAt1 / total,
     costPerSuccess: priorities.costPerSuccess / total,
     timePerSuccess: priorities.timePerSuccess / total,
   };
@@ -71,7 +67,6 @@ export function scoreV1(configuration, priorities = FORMULA_V1.defaultPriorities
   const expectedTime = expectedTimeMinutes(configuration);
 
   return 100
-    * Math.pow(configuration.passAt1 / FORMULA_V1.anchors.passAt1, weights.passAt1)
     * Math.pow(
       FORMULA_V1.anchors.expectedCostUsd / expectedCost,
       weights.costPerSuccess,
@@ -92,11 +87,9 @@ export function scoreV1Expanded(
   const weights = normalizePriorities(priorities);
   const expectedCostAnchor = FORMULA_V1.anchors.expectedCostUsd;
   const expectedTimeAnchor = FORMULA_V1.anchors.expectedTimeMinutes;
-  const passAnchor = FORMULA_V1.anchors.passAt1;
   const meanDurationMinutes = configuration.meanDurationSeconds / 60;
 
   const constant = 100
-    * Math.pow(passAnchor, -weights.passAt1)
     * Math.pow(expectedCostAnchor, weights.costPerSuccess)
     * Math.pow(expectedTimeAnchor, weights.timePerSuccess);
 
@@ -114,11 +107,9 @@ export function dominates(candidate, configuration) {
   const candidateTime = expectedTimeMinutes(candidate);
   const configurationTime = expectedTimeMinutes(configuration);
 
-  const noWorse = candidate.passAt1 >= configuration.passAt1
-    && candidateCost <= configurationCost
+  const noWorse = candidateCost <= configurationCost
     && candidateTime <= configurationTime;
-  const strictlyBetter = candidate.passAt1 > configuration.passAt1
-    || candidateCost < configurationCost
+  const strictlyBetter = candidateCost < configurationCost
     || candidateTime < configurationTime;
 
   return noWorse && strictlyBetter;

@@ -33,34 +33,30 @@ test("single-outcome priorities rank only by the selected outcome", () => {
   });
 
   assert.ok(
-    scoreV1(fastExpensive, { passAt1: 100, costPerSuccess: 0, timePerSuccess: 0 })
-      > scoreV1(slowCheap, { passAt1: 100, costPerSuccess: 0, timePerSuccess: 0 }),
+    scoreV1(slowCheap, { costPerSuccess: 100, timePerSuccess: 0 })
+      > scoreV1(fastExpensive, { costPerSuccess: 100, timePerSuccess: 0 }),
   );
   assert.ok(
-    scoreV1(slowCheap, { passAt1: 0, costPerSuccess: 100, timePerSuccess: 0 })
-      > scoreV1(fastExpensive, { passAt1: 0, costPerSuccess: 100, timePerSuccess: 0 }),
-  );
-  assert.ok(
-    scoreV1(fastExpensive, { passAt1: 0, costPerSuccess: 0, timePerSuccess: 100 })
-      > scoreV1(slowCheap, { passAt1: 0, costPerSuccess: 0, timePerSuccess: 100 }),
+    scoreV1(fastExpensive, { costPerSuccess: 0, timePerSuccess: 100 })
+      > scoreV1(slowCheap, { costPerSuccess: 0, timePerSuccess: 100 }),
   );
 });
 
 test("priorities normalize by ratio", () => {
   assert.deepEqual(
-    normalizePriorities({ passAt1: 60, costPerSuccess: 30, timePerSuccess: 10 }),
-    normalizePriorities({ passAt1: 6, costPerSuccess: 3, timePerSuccess: 1 }),
+    normalizePriorities({ costPerSuccess: 60, timePerSuccess: 40 }),
+    normalizePriorities({ costPerSuccess: 6, timePerSuccess: 4 }),
   );
   assert.throws(
-    () => normalizePriorities({ passAt1: 0, costPerSuccess: 0, timePerSuccess: 0 }),
+    () => normalizePriorities({ costPerSuccess: 0, timePerSuccess: 0 }),
     /At least one priority/,
   );
   assert.throws(
-    () => normalizePriorities({ passAt1: -1, costPerSuccess: 1, timePerSuccess: 1 }),
+    () => normalizePriorities({ costPerSuccess: -1, timePerSuccess: 1 }),
     /finite, nonnegative/,
   );
   assert.throws(
-    () => normalizePriorities({ passAt1: Infinity, costPerSuccess: 1, timePerSuccess: 1 }),
+    () => normalizePriorities({ costPerSuccess: Infinity, timePerSuccess: 1 }),
     /finite, nonnegative/,
   );
 });
@@ -80,9 +76,26 @@ test("Formula v1 literal regression values remain frozen", () => {
     meanCostUsd: 3.47,
     meanDurationSeconds: 1_080,
   });
-  assert.equal(scoreV1(subject).toFixed(12), "155.613400930153");
+  assert.equal(scoreV1(subject).toFixed(12), "179.211716831106");
   assert.equal(expectedCostUsd(subject).toFixed(12), "5.028985507246");
   assert.equal(expectedTimeMinutes(subject).toFixed(12), "26.086956521739");
+});
+
+test("success rate improves both expected outcomes without a direct weight", () => {
+  const lowerSuccess = configuration({ passAt1: 0.5 });
+  const higherSuccess = configuration({ passAt1: 0.6 });
+
+  assert.ok(scoreV1(higherSuccess) > scoreV1(lowerSuccess));
+  assert.equal(
+    (scoreV1(higherSuccess) / scoreV1(lowerSuccess)).toFixed(12),
+    "1.200000000000",
+  );
+});
+
+test("improving cost or time monotonically improves the score", () => {
+  const subject = configuration();
+  assert.ok(scoreV1(configuration({ meanCostUsd: 4 })) > scoreV1(subject));
+  assert.ok(scoreV1(configuration({ meanDurationSeconds: 1_000 })) > scoreV1(subject));
 });
 
 test("zero-pass and unpriced policies are explicit", () => {
@@ -96,13 +109,12 @@ test("zero-pass and unpriced policies are explicit", () => {
   assert.equal(expectedCostUsd(unpriced), null);
 });
 
-test("Pareto uses performance and retry-adjusted point estimates", () => {
+test("Pareto uses retry-adjusted cost and time point estimates", () => {
   const efficient = configuration({ config: "efficient" });
   const dominated = configuration({
     config: "dominated",
-    passAt1: 0.4,
-    meanCostUsd: 5,
-    meanDurationSeconds: 1_200,
+    meanCostUsd: 6,
+    meanDurationSeconds: 1_500,
   });
   const tied = configuration({ config: "tied" });
   const partial = configuration({ config: "partial", tasksAttempted: 90 });
