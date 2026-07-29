@@ -116,8 +116,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toBe(true);
   await expect(page.locator(".chart-point title")).toHaveCount(0);
   await expect(page.locator(".chart-efficiency-label")).toHaveText("most efficient ↖");
-  const costTickPositions = await page.locator(".chart-tick").evaluateAll((ticks) => (
-    ticks.slice(0, 6).map((tick) => Number(tick.getAttribute("x")))
+  await expect(page.locator(".chart-cost-tick")).toHaveText(["$0", "$5", "$10", "$15"]);
+  await expect(page.locator(".chart-pass-tick")).toHaveText([
+    "0%",
+    "10%",
+    "20%",
+    "30%",
+    "40%",
+    "50%",
+    "60%",
+    "70%",
+    "80%",
+  ]);
+  const costTickPositions = await page.locator(".chart-cost-tick").evaluateAll((ticks) => (
+    ticks.map((tick) => Number(tick.getAttribute("x")))
   ));
   expect(costTickPositions).toEqual([...costTickPositions].sort((left, right) => left - right));
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);

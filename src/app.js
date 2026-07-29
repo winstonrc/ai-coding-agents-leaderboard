@@ -106,6 +106,14 @@ function formatCurrency(value) {
   }).format(value);
 }
 
+function formatAxisCurrency(value) {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value);
+}
+
 function formatDuration(value) {
   if (value === Number.POSITIVE_INFINITY) return "∞";
   if (!Number.isFinite(value)) return "—";
@@ -437,11 +445,10 @@ function clearChart() {
     .forEach((element) => element.remove());
 }
 
-function niceMaximum(value) {
-  if (value <= 10) return 10;
+function niceInterval(value) {
   const magnitude = 10 ** Math.floor(Math.log10(value));
   const normalized = value / magnitude;
-  const multiplier = normalized <= 2 ? 2 : normalized <= 4 ? 4 : normalized <= 5 ? 5 : 10;
+  const multiplier = normalized <= 1 ? 1 : normalized <= 2 ? 2 : normalized <= 5 ? 5 : 10;
   return multiplier * magnitude;
 }
 
@@ -550,19 +557,34 @@ function renderChart(configurations) {
   const margin = { top: 28, right: 34, bottom: 62, left: 68 };
   const width = 960 - margin.left - margin.right;
   const height = 430 - margin.top - margin.bottom;
-  const maximumCost = niceMaximum(
-    Math.max(...finite.map((configuration) => configuration.expectedCostUsd)) * 1.05,
+  const highestCost = Math.max(
+    ...finite.map((configuration) => configuration.expectedCostUsd),
   );
+  const costInterval = highestCost <= 50
+    ? 5
+    : niceInterval(highestCost / 8);
+  const maximumCost = Math.ceil(
+    highestCost * 1.05 / costInterval,
+  ) * costInterval;
+  const costTickCount = Math.round(maximumCost / costInterval);
+  const passInterval = 0.1;
   const maximumPass = Math.min(
     1,
-    Math.max(0.8, Math.ceil(Math.max(...finite.map((configuration) => configuration.passAt1)) * 10) / 10),
+    Math.max(
+      0.8,
+      Math.ceil(
+        Math.max(...finite.map((configuration) => configuration.passAt1))
+          / passInterval,
+      ) * passInterval,
+    ),
   );
+  const passTickCount = Math.round(maximumPass / passInterval);
   const x = (cost) => margin.left + width * cost / maximumCost;
   const y = (passAt1) => margin.top + height * (1 - passAt1 / maximumPass);
 
   const grid = createSvgElement("g");
-  for (let index = 0; index <= 5; index += 1) {
-    const cost = maximumCost * index / 5;
+  for (let index = 0; index <= costTickCount; index += 1) {
+    const cost = costInterval * index;
     const xPosition = x(cost);
     grid.append(createSvgElement("line", {
       x1: xPosition,
@@ -575,13 +597,13 @@ function renderChart(configurations) {
       x: xPosition,
       y: margin.top + height + 25,
       "text-anchor": "middle",
-      class: "chart-tick",
+      class: "chart-tick chart-cost-tick",
     });
-    label.textContent = formatCurrency(cost);
+    label.textContent = formatAxisCurrency(cost);
     grid.append(label);
   }
-  for (let index = 0; index <= 4; index += 1) {
-    const passAt1 = maximumPass * index / 4;
+  for (let index = 0; index <= passTickCount; index += 1) {
+    const passAt1 = passInterval * index;
     const yPosition = y(passAt1);
     grid.append(createSvgElement("line", {
       x1: margin.left,
@@ -594,7 +616,7 @@ function renderChart(configurations) {
       x: margin.left - 12,
       y: yPosition + 4,
       "text-anchor": "end",
-      class: "chart-tick",
+      class: "chart-tick chart-pass-tick",
     });
     label.textContent = formatPercent(passAt1, 0);
     grid.append(label);
