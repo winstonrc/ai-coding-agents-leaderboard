@@ -237,7 +237,11 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toHaveAttribute("rel", "noreferrer");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png",
+    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=2",
+  );
+  await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
+    "content",
+    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=2",
   );
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",
