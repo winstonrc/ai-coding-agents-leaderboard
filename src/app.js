@@ -429,10 +429,35 @@ function renderTable(configurations) {
     );
     row.append(valueCell);
 
-    const performanceText = Number.isFinite(configuration.ciHalf)
-      ? `${formatPercent(configuration.passAt1)} ±${formatPercent(configuration.ciHalf)}`
-      : formatPercent(configuration.passAt1);
-    appendText(row, "td", performanceText, "numeric");
+    appendText(
+      row,
+      "td",
+      formatCurrency(configuration.amortizedCostPerPassUsd),
+      "numeric",
+    );
+    appendText(
+      row,
+      "td",
+      formatDuration(configuration.amortizedAgentTimePerPassMinutes),
+      "numeric",
+    );
+    const performanceCell = document.createElement("td");
+    performanceCell.className = "numeric";
+    appendText(
+      performanceCell,
+      "span",
+      formatPercent(configuration.passAt1),
+      "performance-value",
+    );
+    if (Number.isFinite(configuration.ciHalf)) {
+      appendText(
+        performanceCell,
+        "span",
+        `±${formatPercent(configuration.ciHalf)}`,
+        "performance-ci",
+      );
+    }
+    row.append(performanceCell);
     const persistenceCell = document.createElement("td");
     persistenceCell.className = "numeric";
     persistenceCell.textContent = configuration.runs === 4
@@ -446,18 +471,6 @@ function renderTable(configurations) {
       `${persistenceCell.textContent}. ${persistenceCell.title}`,
     );
     row.append(persistenceCell);
-    appendText(
-      row,
-      "td",
-      formatCurrency(configuration.amortizedCostPerPassUsd),
-      "numeric",
-    );
-    appendText(
-      row,
-      "td",
-      formatDuration(configuration.amortizedAgentTimePerPassMinutes),
-      "numeric",
-    );
     elements.tableBody.append(row);
   });
 

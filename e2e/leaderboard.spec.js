@@ -115,10 +115,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   )).toEqual([
     "Model",
     "Value",
+    test.info().project.name === "mobile-320" ? "Cost/\nPass" : "Cost/pass",
+    test.info().project.name === "mobile-320" ? "Time/\nPass" : "Time/pass",
     "Pass@1",
     "Pass@4",
-    test.info().project.name === "mobile-320" ? "Cost" : "Cost/pass",
-    test.info().project.name === "mobile-320" ? "Time" : "Time/pass",
   ]);
   await expect(page.locator("#leaderboard-body td").first())
     .toHaveCSS("vertical-align", "top");
@@ -141,10 +141,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toEqual([
     null,
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
-    "Point-estimate single-attempt success rate (Pass@1).",
-    "Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable.",
     "Mean cost per scored attempt divided by the point-estimate single-attempt success rate.",
     "Mean agent time per scored attempt divided by the point-estimate single-attempt success rate.",
+    "Point-estimate single-attempt success rate (Pass@1).",
+    "Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable.",
   ]);
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
@@ -330,7 +330,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(3);
   await expect(page.locator("#leaderboard-body tr").first())
     .toContainText("80.0%");
-  await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(3))
+  await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(5))
     .toHaveAttribute("title", /within 4 runs/);
   await expect(page.locator("#leaderboard-body tr").first().locator(".relative-value"))
     .toHaveText("1.00×");
@@ -494,7 +494,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
       scrollWidth: wrapper.scrollWidth,
     }));
     expect(tableDimensions.scrollWidth - tableDimensions.clientWidth)
-      .toBeLessThanOrEqual(60);
+      .toBeGreaterThan(0);
+    expect(tableDimensions.scrollWidth - tableDimensions.clientWidth)
+      .toBeLessThanOrEqual(380);
     const visibleHeaders = await page.locator("thead th:visible").evaluateAll(
       (headers) => headers.map((header) => ({
         clientWidth: header.clientWidth,
@@ -513,12 +515,11 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     for (const cell of numericCells) {
       expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
     }
-    for (const columnIndex of [3]) {
-      await expect(page.locator("thead th").nth(columnIndex)).toBeHidden();
-    }
+    await expect(page.getByRole("columnheader", { name: "Tasks solved within four published runs" }))
+      .toBeVisible();
     await expect(page.locator("thead")).toContainText("Value");
-    await expect(page.locator("thead")).toContainText("Cost");
-    await expect(page.locator("thead")).toContainText("Time");
+    await expect(page.locator("thead")).toContainText("Cost/Pass");
+    await expect(page.locator("thead")).toContainText("Time/Pass");
   }
   expect(consoleErrors).toEqual([]);
 });
@@ -547,20 +548,40 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   }
 });
 
-test("iPhone-width chart and table fit without horizontal scrolling", async ({ page }) => {
+test("iPhone-width chart fits while the complete table scrolls within its wrapper", async ({ page }) => {
   test.skip(
     test.info().project.name === "mobile-320",
     "This test controls its own iPhone-width viewport.",
   );
   await page.setViewportSize({ width: 402, height: 874 });
-  await routeFeed(page);
+  await routeFeed(page, feed({
+    rows: [row({ ci_half: 0.02 })],
+  }));
   await page.goto("/?formula=v1");
 
-  for (const selector of [".nav-content", ".chart-wrap", ".table-wrap"]) {
+  for (const selector of [".nav-content", ".chart-wrap"]) {
     expect(await page.locator(selector).evaluate(
       (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
     )).toBe(true);
   }
+  expect(await page.locator(".table-wrap").evaluate(
+    (wrapper) => wrapper.scrollWidth > wrapper.clientWidth,
+  )).toBe(true);
+  const modelName = page.locator("#leaderboard-body .configuration-name");
+  expect(await modelName.count()).toBeGreaterThan(0);
+  const firstModelName = modelName.first();
+  expect(await firstModelName.evaluate(
+    (element) => element.scrollWidth <= element.clientWidth,
+  )).toBe(true);
+  await expect(firstModelName).toHaveCSS("text-overflow", "clip");
+  await expect(page.locator("#leaderboard-body .performance-ci").first())
+    .toHaveCSS("display", "block");
+  expect(await page.locator("body").evaluate((body) => (
+    body.scrollWidth <= document.documentElement.clientWidth
+  ))).toBe(true);
+  await expect(page.getByRole("columnheader", {
+    name: "Tasks solved within four published runs",
+  })).toBeVisible();
 });
 
 test("methodology heading aligns with its reading column", async ({ page }) => {
@@ -801,9 +822,9 @@ test("repeated-run sorting places non-four-run rows last and marks them unavaila
     "four-run-lower [high]",
     "two-run [high]",
   ]);
-  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(3))
+  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(5))
     .toHaveText("—");
-  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(3))
+  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(5))
     .toHaveAttribute("title", "2 published runs; not comparable");
 });
 

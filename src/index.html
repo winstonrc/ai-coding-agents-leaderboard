@@ -188,6 +188,18 @@
                   <th
                     scope="col"
                     class="numeric"
+                    aria-label="Amortized cost per benchmark pass"
+                    title="Mean cost per scored attempt divided by the point-estimate single-attempt success rate."
+                  ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost/<br>Pass</span></th>
+                  <th
+                    scope="col"
+                    class="numeric"
+                    aria-label="Amortized agent time per benchmark pass"
+                    title="Mean agent time per scored attempt divided by the point-estimate single-attempt success rate."
+                  ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time/<br>Pass</span></th>
+                  <th
+                    scope="col"
+                    class="numeric"
                     aria-label="Point-estimate single-attempt success rate"
                     title="Point-estimate single-attempt success rate (Pass@1)."
                   >Pass@1</th>
@@ -197,18 +209,6 @@
                     aria-label="Tasks solved within four published runs"
                     title="Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable."
                   >Pass@4</th>
-                  <th
-                    scope="col"
-                    class="numeric"
-                    aria-label="Amortized cost per benchmark pass"
-                    title="Mean cost per scored attempt divided by the point-estimate single-attempt success rate."
-                  ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost</span></th>
-                  <th
-                    scope="col"
-                    class="numeric"
-                    aria-label="Amortized agent time per benchmark pass"
-                    title="Mean agent time per scored attempt divided by the point-estimate single-attempt success rate."
-                  ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time</span></th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body"></tbody>

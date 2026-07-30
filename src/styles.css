@@ -503,6 +503,10 @@ td.numeric {
   white-space: nowrap;
 }
 
+.performance-ci {
+  margin-left: 0.25em;
+}
+
 .compact-column-label {
   display: none;
 }
@@ -585,30 +589,25 @@ code {
   }
 
   table {
-    min-width: 0;
+    min-width: 620px;
     table-layout: fixed;
     font-size: 0.8rem;
   }
 
   th,
   td {
-    padding: 8px 2px;
-    overflow-wrap: anywhere;
+    padding: 8px;
+    overflow-wrap: normal;
   }
 
   th {
     font-size: 0.7rem;
-    white-space: nowrap;
-  }
-
-  th:nth-child(4),
-  td:nth-child(4) {
-    display: none;
+    white-space: normal;
   }
 
   th:nth-child(1),
   td:nth-child(1) {
-    width: 44%;
+    width: 34%;
     min-width: 0;
   }
 
@@ -619,18 +618,22 @@ code {
 
   th:nth-child(3),
   td:nth-child(3) {
-    width: 16.5%;
+    width: 12%;
+  }
+
+  th:nth-child(4),
+  td:nth-child(4) {
+    width: 12%;
   }
 
   th:nth-child(5),
-  td:nth-child(5),
+  td:nth-child(5) {
+    width: 16%;
+  }
+
   th:nth-child(6),
   td:nth-child(6) {
     width: 14%;
-  }
-
-  td:nth-child(3) {
-    white-space: normal;
   }
 
   tr.is-partial .configuration-name {
@@ -640,6 +643,14 @@ code {
 
   .configuration-name {
     font-size: 0.75rem;
+    overflow: visible;
+    text-overflow: clip;
+    white-space: nowrap;
+  }
+
+  .performance-ci {
+    display: block;
+    margin-left: 0;
   }
 
   .wide-column-label {
@@ -664,11 +675,5 @@ code {
   .nav-links {
     flex-wrap: nowrap;
     gap: 16px;
-  }
-}
-
-@media (max-width: 360px) {
-  table {
-    min-width: 340px;
   }
 }
