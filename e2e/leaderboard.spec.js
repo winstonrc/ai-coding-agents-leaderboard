@@ -91,10 +91,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await page.goto("/?formula=v1");
 
   await expect(page.locator("#status-title")).toHaveText("4 configurations validated");
-  await expect(page.locator("#cost-priority-value")).toHaveText("50% time · 50% cost");
+  await expect(page.locator("#cost-priority-value")).toHaveText("50% Time · 50% Cost");
   await expect(page.locator("#cost-priority")).toHaveAttribute(
     "aria-valuetext",
-    "50% time · 50% cost",
+    "50% Time · 50% Cost",
   );
   await expect(page.locator("#cost-priority")).toHaveAttribute("step", "5");
   await expect(page.locator(".priority-ticks i")).toHaveCount(21);
@@ -106,7 +106,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     );
     expect(Math.max(...sliderTops) - Math.min(...sliderTops)).toBeLessThan(1);
   }
-  await expect(page.getByText("Time–cost priority", { exact: true })).toBeVisible();
+  await expect(page.getByText("Time–Cost priority", { exact: true })).toBeVisible();
   await expect(page.locator(".priority-scale span").first()).toHaveText("Time");
   await expect(page.locator(".priority-scale span").last()).toHaveText("Cost");
   await expect(page.getByText(
@@ -494,9 +494,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toBe(true);
 
   await page.locator("#cost-priority").fill("100");
-  await expect(page.locator("#cost-priority-value")).toHaveText("0% time · 100% cost");
+  await expect(page.locator("#cost-priority-value")).toHaveText("0% Time · 100% Cost");
   await page.locator("#cost-priority").fill("0");
-  await expect(page.locator("#cost-priority-value")).toHaveText("100% time · 0% cost");
+  await expect(page.locator("#cost-priority-value")).toHaveText("100% Time · 0% Cost");
 
   if (test.info().project.name === "mobile-320") {
     await expect(page.locator(".nav-content")).toHaveCSS("white-space", "nowrap");

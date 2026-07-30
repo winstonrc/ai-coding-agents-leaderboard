@@ -351,7 +351,7 @@ function renderPriorityOutputs() {
   const normalized = normalizePriorities(state.priorities);
   elements.costPriorityValue.textContent = `${
     formatPercent(normalized.amortizedAgentTimePerPass, 0)
-  } time · ${formatPercent(normalized.amortizedCostPerPass, 0)} cost`;
+  } Time · ${formatPercent(normalized.amortizedCostPerPass, 0)} Cost`;
   elements.costPriority.setAttribute(
     "aria-valuetext",
     elements.costPriorityValue.textContent,
