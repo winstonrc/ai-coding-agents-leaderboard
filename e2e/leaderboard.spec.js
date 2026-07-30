@@ -573,7 +573,7 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   ));
   expect(secondBarRatio).toBeCloseTo(secondRowValue, 2);
 
-  await page.setViewportSize({ width: 801, height: 800 });
+  await page.setViewportSize({ width: 901, height: 800 });
   await expect(page.locator(".select-control")).toHaveCSS("flex-direction", "row");
   expect(await page.locator("thead th:last-child .wide-column-label").evaluate(
     (label) => label.getClientRects().length,
@@ -581,7 +581,7 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   expect(await tableWrap.evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
-  await page.setViewportSize({ width: 799, height: 800 });
+  await page.setViewportSize({ width: 899, height: 800 });
   await expect(page.locator(".select-control")).toHaveCSS("flex-direction", "column");
   await expect(page.locator("#leaderboard-body tr").first())
     .toHaveCSS("display", "grid");

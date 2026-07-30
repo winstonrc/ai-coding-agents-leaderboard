@@ -603,7 +603,7 @@ code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .priority-grid,
   .model-options,
   .provenance dl {
@@ -651,7 +651,7 @@ code {
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .select-control {
     align-items: flex-start;
     flex-direction: column;
@@ -659,7 +659,7 @@ code {
   }
 }
 
-@media (max-width: 800px) {
+@media (max-width: 900px) {
   .table-wrap {
     container-type: inline-size;
     overflow-x: visible;
