@@ -664,6 +664,10 @@ function chooseLabelRectangle({
         Math.abs(connector.x - point.x) < 4
         || Math.abs(connector.y - point.y) < 4
       ) ? 1 : 0;
+      const connectorDistance = Math.hypot(
+        connector.x - point.x,
+        connector.y - point.y,
+      );
       return {
         connector,
         connectorSegment,
@@ -673,10 +677,11 @@ function chooseLabelRectangle({
           coversTarget,
           labelOverlap,
           pointOverlaps,
+          diagonalOnly ? Math.floor(connectorDistance / 24) : 0,
           lineIntersections,
           connectorObstructions,
           diagonalOnly ? 0 : axisAlignedConnector,
-          Math.hypot(connector.x - point.x, connector.y - point.y),
+          connectorDistance,
           rectangle.index,
         ],
       };
@@ -705,7 +710,7 @@ function renderChart(configurations) {
   const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
   const compact = renderedWidth < 720;
   const chartWidth = compact ? Math.max(280, Math.round(renderedWidth)) : 960;
-  const chartHeight = compact ? 500 : 430;
+  const chartHeight = compact ? 500 : 600;
   elements.chart.setAttribute("viewBox", `0 0 ${chartWidth} ${chartHeight}`);
   elements.chart.classList.toggle("is-compact", compact);
 
