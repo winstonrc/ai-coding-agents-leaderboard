@@ -21,7 +21,7 @@ body {
 
 .page-width {
   width: 100%;
-  max-width: 1180px;
+  max-width: 1024px;
   margin-inline: auto;
   padding-inline: 1em;
 }
@@ -33,7 +33,7 @@ body {
 .nav-content {
   display: flex;
   width: 100%;
-  max-width: 1180px;
+  max-width: 1024px;
   min-height: 52px;
   align-items: center;
   justify-content: space-between;

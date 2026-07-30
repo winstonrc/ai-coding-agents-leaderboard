@@ -533,6 +533,8 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   await page.goto("/?formula=v1");
 
   const tableWrap = page.locator(".table-wrap");
+  expect((await page.locator("main.page-width").boundingBox()).width)
+    .toBeLessThanOrEqual(1_024);
   expect(await tableWrap.evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
