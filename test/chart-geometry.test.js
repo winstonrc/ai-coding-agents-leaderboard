@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  pointToSegmentDistance,
   segmentIntersectsRectangle,
   segmentsIntersect,
 } from "../src/chart-geometry.js";
@@ -60,5 +61,32 @@ test("segment intersection with a rectangle ignores distant aligned edges", () =
       rectangle,
     ),
     true,
+  );
+});
+
+test("point distance measures clearance from the nearest place on a segment", () => {
+  assert.equal(
+    pointToSegmentDistance(
+      { x: 5, y: 4 },
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ),
+    4,
+  );
+  assert.equal(
+    pointToSegmentDistance(
+      { x: 13, y: 4 },
+      { x: 0, y: 0 },
+      { x: 10, y: 0 },
+    ),
+    5,
+  );
+  assert.equal(
+    pointToSegmentDistance(
+      { x: 3, y: 4 },
+      { x: 0, y: 0 },
+      { x: 0, y: 0 },
+    ),
+    5,
   );
 });

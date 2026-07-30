@@ -80,6 +80,51 @@ async function routeFeed(page, body = feed()) {
   }));
 }
 
+async function defaultConnectorClearances(page) {
+  return page.locator(
+    '.chart-point-label[data-default-visible="true"] .chart-label-connector',
+  ).evaluateAll((connectors) => {
+    const points = [...document.querySelectorAll(".chart-point-group")]
+      .map((point) => ({
+        config: point.dataset.config,
+        x: Number(point.dataset.chartX),
+        y: Number(point.dataset.chartY),
+      }));
+    return connectors.flatMap((connector) => {
+      const label = connector.parentElement;
+      const start = {
+        x: Number(connector.getAttribute("x1")),
+        y: Number(connector.getAttribute("y1")),
+      };
+      const end = {
+        x: Number(connector.getAttribute("x2")),
+        y: Number(connector.getAttribute("y2")),
+      };
+      const deltaX = end.x - start.x;
+      const deltaY = end.y - start.y;
+      const squaredLength = deltaX ** 2 + deltaY ** 2;
+      return points
+        .filter((point) => point.config !== label.dataset.config
+          && Math.hypot(point.x - start.x, point.y - start.y) >= 10)
+        .map((point) => {
+          const projection = squaredLength === 0 ? 0 : Math.max(0, Math.min(
+            1,
+            ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY)
+              / squaredLength,
+          ));
+          return {
+            clearance: Math.hypot(
+              point.x - (start.x + projection * deltaX),
+              point.y - (start.y + projection * deltaY),
+            ),
+            connector: label.dataset.config,
+            point: point.config,
+          };
+        });
+    });
+  });
+}
+
 test("defaults, floor, table-only Pareto filter, and sorting are independent", async ({ page }) => {
   const consoleErrors = [];
   page.on("console", (message) => {
@@ -925,8 +970,77 @@ test("dense chart labels avoid other labels and connectors", async ({ page }) =>
       Number(connector.getAttribute("y2")) - Number(connector.getAttribute("y1")),
     ),
   })));
-  expect(connectorOffsets.every((offset) => offset.x >= 4 && offset.y >= 4))
+  expect(connectorOffsets).toHaveLength(labels.length);
+  expect(connectorOffsets.every((offset) => Math.hypot(offset.x, offset.y) >= 12))
     .toBe(true);
+
+  const connectorClearances = await defaultConnectorClearances(page);
+  const minimumClearance = connectorClearances.sort(
+    (left, right) => left.clearance - right.clearance,
+  )[0];
+  if (test.info().project.name !== "mobile-320") {
+    expect(minimumClearance.clearance, JSON.stringify(minimumClearance))
+      .toBeGreaterThanOrEqual(9);
+  }
+});
+
+test("sparse compact labels keep connectors clear of markers", async ({ page }) => {
+  await routeFeed(page);
+  await page.setViewportSize({ width: 600, height: 900 });
+  await page.goto("/?formula=v1");
+
+  const minimumClearance = (await defaultConnectorClearances(page)).sort(
+    (left, right) => left.clearance - right.clearance,
+  )[0];
+  expect(minimumClearance.clearance, JSON.stringify(minimumClearance))
+    .toBeGreaterThanOrEqual(9);
+});
+
+test("nearby compact widths keep label connector directions stable", async ({ page }) => {
+  await routeFeed(page, feed({
+    rows: Array.from({ length: 4 }, (_, index) => row({
+      config: `stable-${index}`,
+      harness: "stable-agent",
+      model: "stable-model",
+      reasoning_effort: ["low", "medium", "high", "max"][index],
+      pass_at_1: 0.7,
+      mean_cost_usd: 4.2 + index * 0.12,
+      mean_duration_seconds: 1_000 + index * 25,
+    })),
+  }));
+  await page.setViewportSize({ width: 860, height: 900 });
+  await page.goto("/?formula=v1");
+
+  const connectorVector = async (config) => page.locator(
+    `.chart-point-label[data-config="${config}"] .chart-label-connector`,
+  ).evaluate((connector) => ({
+    x: Number(connector.getAttribute("x2")) - Number(connector.getAttribute("x1")),
+    y: Number(connector.getAttribute("y2")) - Number(connector.getAttribute("y1")),
+  }));
+  const vectors = [];
+  let previousViewBox = null;
+  for (let width = 860; width >= 760; width -= 4) {
+    await page.setViewportSize({ width, height: 900 });
+    if (previousViewBox !== null) {
+      await expect.poll(
+        () => page.locator(".value-chart").getAttribute("viewBox"),
+      ).not.toBe(previousViewBox);
+    }
+    previousViewBox = await page.locator(".value-chart").getAttribute("viewBox");
+    vectors.push(await connectorVector("stable-0"));
+  }
+  const transitions = vectors.filter((vector, index) => (
+    index === 0
+      || Math.sign(vector.x) !== Math.sign(vectors[index - 1].x)
+      || Math.sign(vector.y) !== Math.sign(vectors[index - 1].y)
+  ));
+  expect(new Set(
+    transitions.map((vector) => `${Math.sign(vector.x)},${Math.sign(vector.y)}`),
+  ).size).toBe(transitions.length);
+  expect(vectors.slice(1).every((vector, index) => Math.hypot(
+    vector.x - vectors[index].x,
+    vector.y - vectors[index].y,
+  ) <= 24)).toBe(true);
 });
 
 test("shared model filter applies to the chart and table", async ({ page }) => {

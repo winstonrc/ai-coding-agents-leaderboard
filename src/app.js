@@ -18,6 +18,7 @@ import {
 } from "./scoring/v1.js";
 import {
   pointInsideRectangle,
+  pointToSegmentDistance,
   rectangleOverlapArea,
   segmentIntersectsRectangle,
   segmentsIntersect,
@@ -27,6 +28,7 @@ const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
 const PUBLISHED_FEED_METADATA_URL = "./data/feed-metadata.json";
 const CHART_SERIES_COUNT = 10;
+const LABEL_CONNECTOR_POINT_CLEARANCE = 9;
 const EFFORT_ORDER = new Map([
   ["low", 0],
   ["medium", 1],
@@ -617,11 +619,15 @@ function connectorEnd(point, rectangle) {
 function labelRectangles(point, width, height, bounds, offsets, diagonalOnly) {
   const positions = offsets.flatMap((offset) => {
     const diagonalPositions = [
-      { left: point.x + offset, top: point.y - offset - height },
-      { left: point.x + offset, top: point.y + offset },
-      { left: point.x - offset - width, top: point.y + offset },
-      { left: point.x - offset - width, top: point.y - offset - height },
-    ];
+      [offset, offset],
+      [offset, offset * 0.75],
+      [offset * 0.75, offset],
+    ].flatMap(([horizontal, vertical]) => [
+      { left: point.x + horizontal, top: point.y - vertical - height },
+      { left: point.x + horizontal, top: point.y + vertical },
+      { left: point.x - horizontal - width, top: point.y + vertical },
+      { left: point.x - horizontal - width, top: point.y - vertical - height },
+    ]);
     if (diagonalOnly) return diagonalPositions;
     return [
       diagonalPositions[0],
@@ -665,10 +671,21 @@ function chooseLabelRectangle({
   offsets = [16, 28, 40, 52],
   diagonalOnly = false,
 }) {
-  return labelRectangles(point, width, height, bounds, offsets, diagonalOnly)
+  return labelRectangles(
+    point,
+    width,
+    height,
+    bounds,
+    offsets,
+    diagonalOnly,
+  )
     .map((rectangle) => {
       const connector = connectorEnd(point, rectangle);
       const connectorSegment = { start: point, end: connector };
+      const connectorDistance = Math.hypot(
+        connector.x - point.x,
+        connector.y - point.y,
+      );
       const coversTarget = pointInsideRectangle(point, rectangle, 4) ? 1 : 0;
       const labelOverlap = occupiedLabels.reduce(
         (total, placed) => total + rectangleOverlapArea(rectangle, placed, 8),
@@ -677,6 +694,14 @@ function chooseLabelRectangle({
       const pointOverlaps = points.filter(
         (candidate) => candidate !== point
           && pointInsideRectangle(candidate, rectangle, 7),
+      ).length;
+      const connectorPointOverlaps = points.filter(
+        (candidate) => candidate !== point
+          && pointToSegmentDistance(
+            candidate,
+            connectorSegment.start,
+            connectorSegment.end,
+          ) < LABEL_CONNECTOR_POINT_CLEARANCE,
       ).length;
       const lineIntersections = segments.filter(
         (segment) => segmentIntersectsRectangle(
@@ -713,27 +738,26 @@ function chooseLabelRectangle({
       const connectorObstructions = labelConnectorIntersections
         + connectorLabelIntersections
         + connectorIntersections;
-      const axisAlignedConnector = (
-        Math.abs(connector.x - point.x) < 4
-        || Math.abs(connector.y - point.y) < 4
-      ) ? 1 : 0;
-      const connectorDistance = Math.hypot(
-        connector.x - point.x,
-        connector.y - point.y,
-      );
+      const horizontalDistance = Math.abs(connector.x - point.x);
+      const verticalDistance = Math.abs(connector.y - point.y);
+      const majorDistance = Math.max(horizontalDistance, verticalDistance);
+      const minorDistance = Math.min(horizontalDistance, verticalDistance);
+      const axisImbalance = majorDistance === 0
+        ? 1
+        : 1 - minorDistance / majorDistance;
+      const connectorPreference = connectorDistance * (1 + axisImbalance);
       return {
         connector,
         connectorSegment,
         rectangle,
         score: [
-          diagonalOnly ? axisAlignedConnector : 0,
           coversTarget,
           labelOverlap,
           pointOverlaps,
-          diagonalOnly ? Math.floor(connectorDistance / 24) : 0,
-          lineIntersections,
+          connectorPointOverlaps,
           connectorObstructions,
-          diagonalOnly ? 0 : axisAlignedConnector,
+          lineIntersections,
+          connectorPreference,
           connectorDistance,
           rectangle.index,
         ],
@@ -1104,14 +1128,14 @@ function renderChart(configurations, groupIdentifiers) {
     y: y(configuration.amortizedAgentTimePerPassMinutes),
   }));
   const pointsByConfig = new Map(points.map((point) => [point.config, point]));
-  const occupiedConnectors = [];
-  const occupiedLabels = [];
   const labelBounds = {
     bottom: margin.top + height,
     left: margin.left,
     right: margin.left + width,
     top: margin.top,
   };
+  const occupiedConnectors = [];
+  const occupiedLabels = [];
 
   for (const configuration of labelConfigurations) {
     const key = configurationGroupKey(configuration);

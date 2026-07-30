@@ -23,6 +23,24 @@ export function pointInsideRectangle(point, rectangle, padding = 0) {
     && point.y <= rectangle.bottom + padding;
 }
 
+export function pointToSegmentDistance(point, start, end) {
+  const deltaX = end.x - start.x;
+  const deltaY = end.y - start.y;
+  const squaredLength = deltaX ** 2 + deltaY ** 2;
+  if (squaredLength === 0) {
+    return Math.hypot(point.x - start.x, point.y - start.y);
+  }
+  const projection = Math.max(0, Math.min(
+    1,
+    ((point.x - start.x) * deltaX + (point.y - start.y) * deltaY)
+      / squaredLength,
+  ));
+  return Math.hypot(
+    point.x - (start.x + projection * deltaX),
+    point.y - (start.y + projection * deltaY),
+  );
+}
+
 function orientation(start, end, point) {
   return (point.x - start.x) * (end.y - start.y)
     - (point.y - start.y) * (end.x - start.x);
