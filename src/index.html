@@ -86,7 +86,7 @@
           </div>
           <p class="chart-intro">
             The table applies the selected cost/time weighting; the chart shows the
-            underlying trade-off. Repeated-run success is supplemental and does not
+            underlying trade-off. 4-run success is supplemental and does not
             affect value or Pareto status. The bottom-left is more efficient.
           </p>
           <div class="chart-frame">
@@ -137,7 +137,7 @@
             </label>
             <label class="control" for="performance-floor">
               <span>
-                <span>Minimum point-estimate single-attempt success rate</span>
+                <span>Minimum point-estimate 1-run success</span>
                 <output id="performance-floor-value">≥60%</output>
               </span>
               <input id="performance-floor" type="range" min="0" max="100" step="1" value="60">
@@ -157,8 +157,8 @@
               <span>Rank table by</span>
               <select id="sort-by">
                 <option value="value">Relative value</option>
-                <option value="performance">Success rate</option>
-                <option value="persistence">Repeated-run success</option>
+                <option value="performance">1-run success</option>
+                <option value="persistence">4-run success</option>
                 <option value="cost">Lowest amortized cost per pass</option>
                 <option value="speed">Fastest amortized agent time per pass</option>
               </select>
@@ -175,43 +175,48 @@
             aria-labelledby="table-heading"
             tabindex="0"
           >
-            <table>
-              <thead>
-                <tr>
-                  <th scope="col">Model</th>
+            <table role="table" aria-labelledby="table-heading">
+              <thead role="rowgroup">
+                <tr role="row">
+                  <th scope="col" role="columnheader">Model</th>
                   <th
                     scope="col"
+                    role="columnheader"
                     class="numeric"
                     aria-label="Relative value compared with the overall eligible leader"
                     title="Relative to the highest-value configuration meeting the success floor; 1.00× is the leader."
                   >Value</th>
                   <th
                     scope="col"
+                    role="columnheader"
                     class="numeric"
                     aria-label="Amortized cost per benchmark pass"
-                    title="Mean cost per scored attempt divided by the point-estimate single-attempt success rate."
+                    title="Mean cost per scored attempt divided by 1-run success (Pass@1)."
                   ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost/<br>Pass</span></th>
                   <th
                     scope="col"
+                    role="columnheader"
                     class="numeric"
                     aria-label="Amortized agent time per benchmark pass"
-                    title="Mean agent time per scored attempt divided by the point-estimate single-attempt success rate."
+                    title="Mean agent time per scored attempt divided by 1-run success (Pass@1)."
                   ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time/<br>Pass</span></th>
                   <th
                     scope="col"
+                    role="columnheader"
                     class="numeric"
-                    aria-label="Point-estimate single-attempt success rate"
-                    title="Point-estimate single-attempt success rate (Pass@1)."
-                  >Pass@1</th>
+                    aria-label="Point-estimate 1-run success"
+                    title="1-run success is the source Pass@1 point estimate."
+                  ><span class="wide-column-label">1-run success</span><span class="compact-column-label">1-run<br>success</span></th>
                   <th
                     scope="col"
+                    role="columnheader"
                     class="numeric"
-                    aria-label="Tasks solved within four published runs"
-                    title="Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable."
-                  >Pass@4</th>
+                    aria-label="Observed 4-run success"
+                    title="4-run success is the source Pass@4 share of tasks solved at least once across four runs. Rows with a different run count are not directly comparable."
+                  ><span class="wide-column-label">4-run success</span><span class="compact-column-label">4-run<br>success</span></th>
                 </tr>
               </thead>
-              <tbody id="leaderboard-body"></tbody>
+              <tbody id="leaderboard-body" role="rowgroup"></tbody>
             </table>
           </div>
           <p id="empty-state" class="empty-state" hidden>
@@ -243,7 +248,7 @@
           </dl>
           <p>
             Amortized cost and time divide aggregate attempt averages by the
-            single-attempt pass rate; they do not model stopping after a successful retry.
+            1-run success rate (Pass@1); they do not model stopping after a successful retry.
             Coverage may vary because the source excludes some errors.
           </p>
           <p>

@@ -99,7 +99,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
   await expect(page.getByText("Cost priority", { exact: true })).toBeVisible();
   await expect(page.getByText(
-    "Minimum point-estimate single-attempt success rate",
+    "Minimum point-estimate 1-run success",
     { exact: true },
   )).toBeVisible();
   await expect(page.locator(".chart-axis-label").first())
@@ -117,8 +117,8 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "Value",
     test.info().project.name === "mobile-320" ? "Cost/\nPass" : "Cost/pass",
     test.info().project.name === "mobile-320" ? "Time/\nPass" : "Time/pass",
-    "Pass@1",
-    "Pass@4",
+    test.info().project.name === "mobile-320" ? "1-run\nsuccess" : "1-run success",
+    test.info().project.name === "mobile-320" ? "4-run\nsuccess" : "4-run success",
   ]);
   await expect(page.locator("#leaderboard-body td").first())
     .toHaveCSS("vertical-align", "top");
@@ -131,20 +131,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
   );
   await expect(page.getByRole("columnheader", {
-    name: "Point-estimate single-attempt success rate",
+    name: "Point-estimate 1-run success",
   })).toHaveAttribute(
     "title",
-    "Point-estimate single-attempt success rate (Pass@1).",
+    "1-run success is the source Pass@1 point estimate.",
   );
   expect(await page.locator("thead th").evaluateAll((headers) => (
     headers.map((header) => header.getAttribute("title"))
   ))).toEqual([
     null,
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
-    "Mean cost per scored attempt divided by the point-estimate single-attempt success rate.",
-    "Mean agent time per scored attempt divided by the point-estimate single-attempt success rate.",
-    "Point-estimate single-attempt success rate (Pass@1).",
-    "Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable.",
+    "Mean cost per scored attempt divided by 1-run success (Pass@1).",
+    "Mean agent time per scored attempt divided by 1-run success (Pass@1).",
+    "1-run success is the source Pass@1 point estimate.",
+    "4-run success is the source Pass@4 share of tasks solved at least once across four runs. Rows with a different run count are not directly comparable.",
   ]);
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
@@ -402,8 +402,8 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   );
   await hoveredMarker.hover();
   await expect(page.locator("#chart-detail"))
-    .toContainText("single-attempt");
-  await expect(page.locator("#chart-detail")).toContainText("over 4 runs");
+    .toContainText("1-run success");
+  await expect(page.locator("#chart-detail")).toContainText("4-run success");
   await expect(page.locator("#chart-detail")).toContainText("amortized cost");
   await expect(page.locator("#chart-detail")).toContainText("amortized time");
   await expect(page.locator("#chart-detail")).toContainText("value");
@@ -493,33 +493,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
       clientWidth: wrapper.clientWidth,
       scrollWidth: wrapper.scrollWidth,
     }));
-    expect(tableDimensions.scrollWidth - tableDimensions.clientWidth)
-      .toBeGreaterThan(0);
-    expect(tableDimensions.scrollWidth - tableDimensions.clientWidth)
-      .toBeLessThanOrEqual(380);
-    const visibleHeaders = await page.locator("thead th:visible").evaluateAll(
-      (headers) => headers.map((header) => ({
-        clientWidth: header.clientWidth,
-        scrollWidth: header.scrollWidth,
-      })),
-    );
-    for (const header of visibleHeaders) {
-      expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
-    }
-    const numericCells = await page.locator(
-      "#leaderboard-body tr:first-child td.numeric:visible",
-    ).evaluateAll((cells) => cells.map((cell) => ({
-      clientWidth: cell.clientWidth,
-      scrollWidth: cell.scrollWidth,
-    })));
-    for (const cell of numericCells) {
-      expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
-    }
-    await expect(page.getByRole("columnheader", { name: "Tasks solved within four published runs" }))
-      .toBeVisible();
-    await expect(page.locator("thead")).toContainText("Value");
-    await expect(page.locator("thead")).toContainText("Cost/Pass");
-    await expect(page.locator("thead")).toContainText("Time/Pass");
+    expect(tableDimensions.scrollWidth).toBeLessThanOrEqual(tableDimensions.clientWidth);
+    const rowDimensions = await page.locator("#leaderboard-body tr").first()
+      .evaluate((row) => ({
+        clientWidth: row.clientWidth,
+        scrollWidth: row.scrollWidth,
+      }));
+    expect(rowDimensions.scrollWidth).toBeGreaterThan(rowDimensions.clientWidth);
+    await expect(page.locator("#leaderboard-body tr").first())
+      .toHaveCSS("overflow-x", "auto");
+    await expect(page.getByRole("table", { name: "Value table" })).toBeVisible();
+    await expect(page.locator('thead[role="rowgroup"]')).toHaveCount(1);
+    await expect(page.locator('th[role="columnheader"]')).toHaveCount(6);
+    await expect(page.locator('#leaderboard-body tr[role="row"]')).not.toHaveCount(0);
+    await expect(page.locator('#leaderboard-body td[role="cell"]')).not.toHaveCount(0);
   }
   expect(consoleErrors).toEqual([]);
 });
@@ -548,14 +535,18 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   }
 });
 
-test("iPhone-width chart fits while the complete table scrolls within its wrapper", async ({ page }) => {
+test("stacked table scrolls only when its metrics no longer fit", async ({ page }) => {
   test.skip(
     test.info().project.name === "mobile-320",
     "This test controls its own iPhone-width viewport.",
   );
   await page.setViewportSize({ width: 402, height: 874 });
+  const longModel = "claude-fable-5-withanunbrokenmodelnamesuffix";
   await routeFeed(page, feed({
-    rows: [row({ ci_half: 0.02 })],
+    rows: [row({
+      ci_half: 0.02,
+      model: longModel,
+    })],
   }));
   await page.goto("/?formula=v1");
 
@@ -565,23 +556,123 @@ test("iPhone-width chart fits while the complete table scrolls within its wrappe
     )).toBe(true);
   }
   expect(await page.locator(".table-wrap").evaluate(
-    (wrapper) => wrapper.scrollWidth > wrapper.clientWidth,
+    (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
   const modelName = page.locator("#leaderboard-body .configuration-name");
   expect(await modelName.count()).toBeGreaterThan(0);
   const firstModelName = modelName.first();
+  await expect(firstModelName).toHaveText(`${longModel} [high]`);
   expect(await firstModelName.evaluate(
     (element) => element.scrollWidth <= element.clientWidth,
   )).toBe(true);
   await expect(firstModelName).toHaveCSS("text-overflow", "clip");
   await expect(page.locator("#leaderboard-body .performance-ci").first())
-    .toHaveCSS("display", "block");
+    .toHaveCSS("display", "inline");
+  const valueBar = page.locator("#leaderboard-body .relative-value-bar-fill").first();
+  await expect(valueBar).toHaveCSS("width", /.+/);
+  await expect(valueBar).toHaveAttribute("style", "width: 100%;");
+  const barSeriesClass = await valueBar.getAttribute("class");
+  const pointSeriesClass = await page.locator(
+    '.chart-point-group[data-config="agent-alpha-high"] .chart-point',
+  ).getAttribute("class");
+  const barSeries = barSeriesClass.match(/chart-series-\d+/)[0];
+  expect(pointSeriesClass).toContain(barSeries);
+  for (const selector of [
+    ".cost-cell",
+    ".time-cell",
+    ".performance-cell",
+    ".persistence-cell",
+  ]) {
+    const label = await page.locator(`#leaderboard-body ${selector}`).first()
+      .evaluate((cell) => getComputedStyle(cell, "::before").content);
+    expect(label).not.toBe("none");
+    expect(label).not.toBe('""');
+  }
+  const metricTops = await page.locator(
+    "#leaderboard-body tr:first-child > .cost-cell, "
+      + "#leaderboard-body tr:first-child > .time-cell, "
+      + "#leaderboard-body tr:first-child > .performance-cell, "
+      + "#leaderboard-body tr:first-child > .persistence-cell",
+  ).evaluateAll((cells) => cells.map(
+    (cell) => cell.getBoundingClientRect().top,
+  ));
+  expect(Math.max(...metricTops) - Math.min(...metricTops)).toBeLessThan(2);
+  for (const selector of [
+    ".cost-cell",
+    ".time-cell",
+    ".performance-cell",
+    ".persistence-cell",
+  ]) {
+    await expect(page.locator(`#leaderboard-body ${selector}`).first())
+      .toHaveCSS("text-align", "center");
+  }
+  const fittingBarEdges = await page.locator("#leaderboard-body tr").first()
+    .evaluate((row) => ({
+      bar: row.querySelector(".relative-value-bar").getBoundingClientRect().right,
+      divider: row.getBoundingClientRect().right,
+    }));
+  expect(Math.abs(fittingBarEdges.bar - fittingBarEdges.divider)).toBeLessThan(1);
+  await expect(page.locator("#leaderboard-body .value-cell").first())
+    .toHaveCSS("background-color", "rgba(0, 0, 0, 0)");
   expect(await page.locator("body").evaluate((body) => (
     body.scrollWidth <= document.documentElement.clientWidth
   ))).toBe(true);
-  await expect(page.getByRole("columnheader", {
-    name: "Tasks solved within four published runs",
-  })).toBeVisible();
+  await expect(page.locator('table[role="table"]')).toHaveCount(1);
+  await expect(page.locator('th[role="columnheader"]')).toHaveCount(6);
+  await expect(page.locator('#leaderboard-body tr[role="row"]')).toHaveCount(1);
+  await expect(page.locator('#leaderboard-body td[role="cell"]')).toHaveCount(6);
+  await expect(page.locator("#leaderboard-body tr").first())
+    .not.toHaveAttribute("tabindex", "0");
+
+  await page.setViewportSize({ width: 361, height: 874 });
+  await expect(page.locator("#leaderboard-body .performance-ci").first())
+    .toHaveCSS("display", "inline");
+  expect(await page.locator(".table-wrap").evaluate(
+    (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
+  )).toBe(true);
+  expect(await page.locator("#leaderboard-body tr").first().evaluate(
+    (row) => row.scrollWidth > row.clientWidth,
+  )).toBe(true);
+  const narrowBarEdges = await page.locator("#leaderboard-body tr").first()
+    .evaluate((row) => ({
+      bar: row.querySelector(".relative-value-bar").getBoundingClientRect().right,
+      divider: row.getBoundingClientRect().right,
+    }));
+  expect(Math.abs(narrowBarEdges.bar - narrowBarEdges.divider)).toBeLessThan(1);
+  const rowLocator = page.locator("#leaderboard-body tr").first();
+  await expect(rowLocator).toHaveAttribute("tabindex", "0");
+  await rowLocator.focus();
+  await rowLocator.press("ArrowRight");
+  await expect.poll(
+    () => rowLocator.evaluate((element) => element.scrollLeft),
+  ).toBeGreaterThan(0);
+  await rowLocator.evaluate((element) => {
+    element.scrollLeft = 0;
+  });
+  const positionsBeforeScroll = await rowLocator.evaluate((element) => ({
+    configuration: element.querySelector(".configuration-cell").getBoundingClientRect().x,
+    cost: element.querySelector(".cost-cell").getBoundingClientRect().x,
+    value: element.querySelector(".value-cell").getBoundingClientRect().x,
+  }));
+  await rowLocator.evaluate((element) => {
+    element.scrollLeft = 40;
+  });
+  const positionsAfterScroll = await rowLocator.evaluate((element) => ({
+    configuration: element.querySelector(".configuration-cell").getBoundingClientRect().x,
+    cost: element.querySelector(".cost-cell").getBoundingClientRect().x,
+    value: element.querySelector(".value-cell").getBoundingClientRect().x,
+  }));
+  expect(Math.abs(
+    positionsAfterScroll.configuration - positionsBeforeScroll.configuration,
+  )).toBeLessThan(1);
+  expect(Math.abs(
+    positionsAfterScroll.value - positionsBeforeScroll.value,
+  )).toBeLessThan(1);
+  expect(positionsAfterScroll.cost).toBeLessThan(positionsBeforeScroll.cost);
+  await page.setViewportSize({ width: 320, height: 874 });
+  expect(await page.locator("body").evaluate((body) => (
+    body.scrollWidth <= document.documentElement.clientWidth
+  ))).toBe(true);
 });
 
 test("methodology heading aligns with its reading column", async ({ page }) => {
@@ -596,6 +687,13 @@ test("methodology heading aligns with its reading column", async ({ page }) => {
     name: "Definition",
   }).boundingBox();
   expect(Math.abs(heading.x - definition.x)).toBeLessThan(2);
+  await expect(page.getByText(
+    /1-run success \(the source Pass@1 point estimate\)/,
+  )).toBeVisible();
+  await expect(page.getByRole("heading", {
+    level: 2,
+    name: "4-run success (Pass@4)",
+  })).toBeVisible();
 });
 
 test("each family labels its highest-value effort and interactions keep positions fixed", async ({ page }) => {

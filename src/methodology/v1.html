@@ -47,7 +47,8 @@
           (40 / (m / p))<sup>w<sub>t</sub></sup>
         </div>
         <p>
-          <var>p</var> is Pass@1 (single-attempt success rate), <var>c</var> is
+          <var>p</var> is 1-run success (the source Pass@1 point estimate),
+          <var>c</var> is
           mean cost in dollars per attempt, and <var>m</var> is mean duration in
           minutes per attempt. The two nonnegative priorities are normalized to
           sum to one. The defaults are 60% amortized cost per pass and 40%
@@ -60,7 +61,8 @@
         </p>
         <p>
           The leaderboard considers only configurations meeting the selected
-          point-estimate Pass@1 floor, which defaults to 60%. This is an eligibility
+          point-estimate 1-run success (Pass@1) floor, which defaults to 60%.
+          This is an eligibility
           preference, not a statistical confidence threshold.
         </p>
       </section>
@@ -85,7 +87,7 @@
         <p>
           Amortized cost per pass is <var>c / p</var>; amortized agent time per pass
           is <var>m / p</var>. These divide aggregate per-attempt averages by the
-          aggregate single-attempt pass rate. Expanding the formula gives:
+          aggregate 1-run success rate. Expanding the formula gives:
         </p>
         <div class="formula" aria-label="Expanded behavior">
           Score<sub>v1</sub> ∝ p · c<sup>−w<sub>c</sub></sup>
@@ -101,19 +103,20 @@
       </section>
 
       <section>
-        <h2>Repeated-run success</h2>
+        <h2>4-run success (Pass@4)</h2>
         <p>
-          The leaderboard also reports the source-provided share of attempted tasks
-          solved in at least one of four published runs. This helps distinguish a
+          The leaderboard calls the source Pass@4 field “4-run success”: the observed
+          share of attempted tasks solved in at least one of four published runs.
+          This helps distinguish a
           configuration that repeatedly misses the same tasks from one that succeeds
           on more tasks across multiple runs.
         </p>
         <p>
-          Repeated-run success is a supplemental persistence diagnostic. It does not
+          4-run success is a supplemental persistence diagnostic. It does not
           affect Formula v1 or Pareto status, because the aggregate feed does not
           describe a sequential policy that stops after success or the cost and time
           consumed before each task first passes. Rows published with a run count other
-          than four remain visible but are not compared in the repeated-run sort.
+          than four remain visible but are not compared in the 4-run success sort.
         </p>
       </section>
 

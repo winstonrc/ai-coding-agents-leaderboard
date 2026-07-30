@@ -25,10 +25,11 @@ formula gives Pass@1 an effective elasticity of one. These are aggregate benchma
 economics, not a simulation of sequential retries that stop after success. The default
 eligibility floor is 60% point-estimate Pass@1.
 
-The table also reports the source's repeated-run success rate: the share of tasks
-solved in at least one of four published runs. It is a persistence diagnostic and does
-not affect Formula v1 or Pareto status. The site intentionally uses only the aggregate
-feed rather than reconstructing retry behavior from individual trials.
+The interface calls the source Pass@1 point estimate “1-run success.” The table also
+reports “4-run success,” the source Pass@4 share of tasks solved in at least one of
+four published runs. It is a persistence diagnostic and does not affect Formula v1 or
+Pareto status. The site intentionally uses only the aggregate feed rather than
+reconstructing retry behavior from individual trials.
 
 See the permanent [Formula v1 methodology](src/methodology/v1.html) for definitions,
 edge cases, assumptions, Pareto behavior, and interpretation limits. Formula versions

@@ -257,6 +257,19 @@ function modelKey(configuration) {
   return JSON.stringify([configuration.harness, configuration.model]);
 }
 
+function configurationGroupKey(configuration) {
+  return `${configuration.harness}\u0000${configuration.model}`;
+}
+
+function createSeriesMap(configurations) {
+  const keys = new Set(configurations.map(configurationGroupKey));
+  return new Map(
+    [...keys]
+      .sort((left, right) => left.localeCompare(right))
+      .map((key, index) => [key, String(index)]),
+  );
+}
+
 function updateModelFilterSummary(total) {
   elements.modelFilterSummary.textContent = `Models (${state.selectedModelKeys.size}/${total})`;
 }
@@ -371,7 +384,7 @@ function compareConfigurations(left, right) {
   return left.config.localeCompare(right.config);
 }
 
-function renderTable(configurations) {
+function renderTable(configurations, seriesMap) {
   const tableConfigurations = configurations
     .filter((configuration) => !state.paretoOnly || configuration.paretoEfficient)
     .sort(compareConfigurations);
@@ -380,16 +393,31 @@ function renderTable(configurations) {
 
   tableConfigurations.forEach((configuration) => {
     const row = document.createElement("tr");
+    row.setAttribute("role", "row");
+    row.dataset.config = configuration.config;
     if (!configuration.paretoEfficient) row.classList.add("is-dominated");
     if (configuration.tasksAttempted < configuration.tasksInSet) {
       row.classList.add("is-partial");
     }
 
     const nameCell = document.createElement("td");
+    nameCell.className = "configuration-cell";
+    nameCell.setAttribute("role", "cell");
     const displayName = configuration.tasksAttempted < configuration.tasksInSet
       ? `${configurationName(configuration)} (${configuration.tasksAttempted}/${configuration.tasksInSet} tasks)`
       : configurationName(configuration);
     appendText(nameCell, "strong", displayName, "configuration-name");
+    const valueBar = appendText(nameCell, "span", "", "relative-value-bar");
+    valueBar.setAttribute("aria-hidden", "true");
+    const seriesId = seriesMap.get(configurationGroupKey(configuration));
+    const barClass = Number.isFinite(Number(seriesId))
+      ? `relative-value-bar-fill chart-series-${Number(seriesId) % CHART_SERIES_COUNT}`
+      : "relative-value-bar-fill";
+    const valueBarFill = appendText(valueBar, "span", "", barClass);
+    const relativeValue = Number.isFinite(configuration.relativeValue)
+      ? Math.max(0, Math.min(1, configuration.relativeValue))
+      : 0;
+    valueBarFill.style.width = `${relativeValue * 100}%`;
     const effort = configuration.reasoningEffort ?? "default";
     const details = [
       configuration.harness,
@@ -418,7 +446,8 @@ function renderTable(configurations) {
     row.append(nameCell);
 
     const valueCell = document.createElement("td");
-    valueCell.className = "numeric";
+    valueCell.className = "numeric value-cell";
+    valueCell.setAttribute("role", "cell");
     appendText(
       valueCell,
       "strong",
@@ -429,20 +458,26 @@ function renderTable(configurations) {
     );
     row.append(valueCell);
 
-    appendText(
+    const costCell = appendText(
       row,
       "td",
       formatCurrency(configuration.amortizedCostPerPassUsd),
-      "numeric",
+      "numeric cost-cell",
     );
-    appendText(
+    costCell.dataset.label = "Cost/pass";
+    costCell.setAttribute("role", "cell");
+    const timeCell = appendText(
       row,
       "td",
       formatDuration(configuration.amortizedAgentTimePerPassMinutes),
-      "numeric",
+      "numeric time-cell",
     );
+    timeCell.dataset.label = "Time/pass";
+    timeCell.setAttribute("role", "cell");
     const performanceCell = document.createElement("td");
-    performanceCell.className = "numeric";
+    performanceCell.className = "numeric performance-cell";
+    performanceCell.dataset.label = "1-run success";
+    performanceCell.setAttribute("role", "cell");
     appendText(
       performanceCell,
       "span",
@@ -459,7 +494,9 @@ function renderTable(configurations) {
     }
     row.append(performanceCell);
     const persistenceCell = document.createElement("td");
-    persistenceCell.className = "numeric";
+    persistenceCell.className = "numeric persistence-cell";
+    persistenceCell.dataset.label = "4-run success";
+    persistenceCell.setAttribute("role", "cell");
     persistenceCell.textContent = configuration.runs === 4
       ? formatPercent(configuration.passAt4)
       : "—";
@@ -472,6 +509,9 @@ function renderTable(configurations) {
     );
     row.append(persistenceCell);
     elements.tableBody.append(row);
+    if (row.scrollWidth > row.clientWidth + 1) {
+      row.tabIndex = 0;
+    }
   });
 
   elements.emptyState.hidden = tableConfigurations.length > 0;
@@ -490,9 +530,9 @@ function markerDetails(configuration) {
     : "Not Pareto-efficient";
   return `${configurationName(configuration)} — ${
     formatPercent(configuration.passAt1)
-  } single-attempt · ${
+  } 1-run success · ${
     formatPercent(configuration.passAt4)
-  } over ${configuration.runs} runs · ${
+  } ${configuration.runs}-run success · ${
     formatCurrency(configuration.amortizedCostPerPassUsd)
   } amortized cost · ${
     formatDuration(configuration.amortizedAgentTimePerPassMinutes)
@@ -718,7 +758,7 @@ function niceStep(maximum, targetIntervals = 6) {
   return factor * magnitude;
 }
 
-function renderChart(configurations) {
+function renderChart(configurations, groupIdentifiers) {
   clearChart();
   const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
   const compact = renderedWidth < 720;
@@ -830,7 +870,7 @@ function renderChart(configurations) {
 
   const groups = new Map();
   for (const configuration of finite) {
-    const key = `${configuration.harness}\u0000${configuration.model}`;
+    const key = configurationGroupKey(configuration);
     const group = groups.get(key) ?? [];
     group.push(configuration);
     groups.set(key, group);
@@ -838,10 +878,6 @@ function renderChart(configurations) {
   const sortedGroups = [...groups.entries()].sort(([left], [right]) => (
     left.localeCompare(right)
   ));
-  const groupIdentifiers = new Map(
-    sortedGroups.map(([key], index) => [key, String(index)]),
-  );
-
   const crosshair = createSvgElement("g", {
     class: "chart-crosshair",
     visibility: "hidden",
@@ -952,7 +988,7 @@ function renderChart(configurations) {
   }
 
   for (const configuration of finite) {
-    const key = `${configuration.harness}\u0000${configuration.model}`;
+    const key = configurationGroupKey(configuration);
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
     const xPosition = x(configuration.amortizedCostPerPassUsd);
@@ -1078,7 +1114,7 @@ function renderChart(configurations) {
   };
 
   for (const configuration of labelConfigurations) {
-    const key = `${configuration.harness}\u0000${configuration.model}`;
+    const key = configurationGroupKey(configuration);
     const groupId = groupIdentifiers.get(key);
     const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
     const point = pointsByConfig.get(configuration.config);
@@ -1180,8 +1216,11 @@ function render() {
     (configuration) => configuration.paretoEfficient,
   ).length;
 
-  renderChart(floorEligible);
-  const tableCount = renderTable(floorEligible);
+  const seriesMap = createSeriesMap(
+    floorEligible.filter(isFiniteChartConfiguration),
+  );
+  renderChart(floorEligible, seriesMap);
+  const tableCount = renderTable(floorEligible, seriesMap);
   elements.visibleCount.textContent = `Chart ${floorEligible.filter(isFiniteChartConfiguration).length} · table ${tableCount} · ${paretoCount} Pareto-efficient`;
 }
 
