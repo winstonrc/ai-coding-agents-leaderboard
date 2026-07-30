@@ -475,6 +475,9 @@ test("wide tables fit and secondary details hide before overflow", async ({ page
   )).toBe(true);
   await expect(page.locator(".configuration-detail").first())
     .toHaveCSS("display", "block");
+  await expect(tableWrap).toHaveAttribute("role", "region");
+  await expect(tableWrap).toHaveAttribute("aria-labelledby", "table-heading");
+  await expect(tableWrap).toHaveAttribute("tabindex", "0");
   await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(3))
     .toHaveCSS("white-space", "normal");
   for (const columnIndex of [0, 2, 5, 6, 7]) {
