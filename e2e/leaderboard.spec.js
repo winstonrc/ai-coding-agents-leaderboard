@@ -275,35 +275,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   })).toBe(true);
   await expect(page.locator(".chart-legend")).toHaveCSS(
     "justify-content",
-    test.info().project.name === "mobile-320" ? "flex-start" : "flex-end",
+    "flex-start",
   );
-  if (test.info().project.name === "desktop") {
-    const legendBox = await page.locator(".chart-legend").evaluate(
-      (legend) => {
-        const box = legend.getBoundingClientRect();
-        return {
-          bottom: box.bottom,
-          right: box.right - Number.parseFloat(getComputedStyle(legend).paddingRight),
-          top: box.top,
-        };
-      },
-    );
-    const plotBounds = await page.locator("#value-chart").evaluate(
-      (chart) => {
-        const lines = [...chart.querySelectorAll(".chart-grid")];
-        return {
-          right: Math.max(...lines.map((line) => line.getBoundingClientRect().right)),
-          top: Math.min(...lines.map((line) => line.getBoundingClientRect().top)),
-        };
-      },
-    );
-    const explanationBottom = await page.locator(".chart-section > p").first().evaluate(
-      (paragraph) => paragraph.getBoundingClientRect().bottom,
-    );
-    expect(Math.abs(legendBox.right - plotBounds.right)).toBeLessThan(2);
-    expect(plotBounds.top - legendBox.bottom)
-      .toBeLessThan(legendBox.top - explanationBottom);
-  }
+  const legendBox = await page.locator(".chart-legend").boundingBox();
+  const plotBounds = await page.locator("#value-chart").evaluate(
+    (chart) => {
+      const lines = [...chart.querySelectorAll(".chart-grid")];
+      return {
+        left: Math.min(...lines.map((line) => line.getBoundingClientRect().left)),
+        top: Math.min(...lines.map((line) => line.getBoundingClientRect().top)),
+      };
+    },
+  );
+  expect(Math.abs(legendBox.x - plotBounds.left)).toBeLessThan(2);
+  expect(legendBox.y + legendBox.height).toBeLessThan(plotBounds.top);
   const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
     labels.map((label) => ({
       fontWeight: getComputedStyle(label).fontWeight,

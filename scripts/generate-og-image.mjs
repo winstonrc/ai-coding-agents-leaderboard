@@ -6,7 +6,7 @@ import path from "node:path";
 import { chromium } from "@playwright/test";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
-const port = 4174;
+const port = Number(process.env.PORT ?? 4174);
 const server = spawn(process.execPath, ["scripts/serve.mjs"], {
   cwd: root,
   env: { ...process.env, PORT: String(port) },

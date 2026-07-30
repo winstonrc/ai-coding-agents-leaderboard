@@ -15,34 +15,43 @@ body {
 .controls,
 .table-section,
 .provenance,
+.chart-section > .section-heading,
+.chart-intro,
 .chart-detail {
   display: none !important;
 }
 
 main.page-width {
+  display: flex;
   width: 1200px;
+  height: 630px;
   max-width: none;
-  padding: 24px 34px 0;
+  align-items: center;
+  padding: 0 12px;
+}
+
+#leaderboard {
+  width: 100%;
 }
 
 .chart-section {
+  width: 100%;
   margin: 0;
 }
 
-.section-heading {
-  margin-bottom: 0;
-  padding-top: 0;
-  border-top: 0;
+.chart-frame {
+  margin-top: 0;
 }
 
 .chart-legend {
-  flex-shrink: 0;
-  gap: 10px;
-  font-size: 13px;
+  width: 960px;
+  justify-content: flex-start;
+  padding: 0 0 0 92px;
+  margin: 8px auto 0;
 }
 
 .value-chart {
   width: 100%;
-  height: 440px;
+  height: 600px;
   min-height: 0;
 }

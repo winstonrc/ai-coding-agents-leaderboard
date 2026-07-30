@@ -238,10 +238,9 @@ input[type="range"] {
 .chart-legend {
   display: flex;
   flex-wrap: wrap;
-  justify-content: flex-end;
+  justify-content: flex-start;
   gap: 12px;
-  padding-right: 3.54%;
-  margin: 12px 0 -24px;
+  margin: 8px 3.54% 0 9.58%;
   font-size: 0.85rem;
 }
 
@@ -592,9 +591,7 @@ code {
   }
 
   .chart-legend {
-    justify-content: flex-start;
-    padding-right: 0;
-    margin: 8px 8px 0;
+    margin: 8px 24px 0 58px;
   }
 
   .wide-column-label {
