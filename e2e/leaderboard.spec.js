@@ -576,7 +576,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     expect(rowDimensions.scrollWidth).toBeGreaterThan(rowDimensions.clientWidth);
     await expect(page.locator("#leaderboard-body tr").first())
       .toHaveCSS("overflow-x", "auto");
-    await expect(page.getByRole("table", { name: "Value table" })).toBeVisible();
+    await expect(page.getByRole("table", { name: "Leaderboard" })).toBeVisible();
     await expect(page.locator('thead[role="rowgroup"]')).toHaveCount(1);
     await expect(page.locator('th[role="columnheader"]')).toHaveCount(6);
     await expect(page.locator('#leaderboard-body tr[role="row"]')).not.toHaveCount(0);

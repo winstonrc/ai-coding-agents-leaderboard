@@ -118,6 +118,12 @@ main {
   margin-top: 28px;
 }
 
+.controls {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px solid;
+}
+
 .priority-grid {
   display: grid;
   grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -199,7 +205,7 @@ input[type="range"] {
   display: grid;
   justify-items: start;
   gap: 12px;
-  margin-bottom: 20px;
+  margin-top: 20px;
 }
 
 .select-control {
@@ -227,12 +233,6 @@ input[type="range"] {
   margin-bottom: 12px;
   padding-top: 12px;
   border-top: 1px solid;
-}
-
-.eyebrow {
-  margin-bottom: 4px;
-  color: GrayText;
-  font-size: 0.85rem;
 }
 
 .chart-legend {
@@ -449,7 +449,7 @@ input[type="range"] {
 }
 
 .chart-detail {
-  height: 3rem;
+  height: clamp(3rem, calc(10rem - 12.5vw), 7.5rem);
   margin: 6px 0 0;
   overflow-y: auto;
   font-size: 0.88rem;
@@ -595,10 +595,6 @@ code {
     justify-content: flex-start;
     padding-right: 0;
     margin: 8px 8px 0;
-  }
-
-  .chart-detail {
-    height: 7.5rem;
   }
 
   .wide-column-label {
