@@ -553,16 +553,18 @@ function markerDetails(configuration) {
     ? "Pareto-efficient"
     : "Not Pareto-efficient";
   return `${configurationName(configuration)} — ${
+    formatRelativeValue(configuration.relativeValue)
+  } value · ${
+    formatDuration(configuration.amortizedAgentTimePerPassMinutes)
+  } amortized time · ${
+    formatCurrency(configuration.amortizedCostPerPassUsd)
+  } amortized cost · ${
     formatPercent(configuration.passAt1)
   } 1-run success · ${
     formatPercent(configuration.passAt4)
   } ${configuration.runs}-run success · ${
-    formatCurrency(configuration.amortizedCostPerPassUsd)
-  } amortized cost · ${
-    formatDuration(configuration.amortizedAgentTimePerPassMinutes)
-  } amortized time · ${
-    formatRelativeValue(configuration.relativeValue)
-  } value · ${status}.`;
+    status
+  }.`;
 }
 
 function showChartDetails(configuration, marker, groupId) {

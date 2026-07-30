@@ -457,6 +457,15 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#chart-detail")).toContainText("amortized cost");
   await expect(page.locator("#chart-detail")).toContainText("amortized time");
   await expect(page.locator("#chart-detail")).toContainText("value");
+  const detailText = await page.locator("#chart-detail").textContent();
+  const detailOrder = [
+    "value",
+    "amortized time",
+    "amortized cost",
+    "1-run success",
+    "4-run success",
+  ].map((text) => detailText.indexOf(text));
+  expect(detailOrder).toEqual([...detailOrder].sort((left, right) => left - right));
   await expect(pointLabel).toHaveClass(/is-active/);
   await expect(pointLabel.locator("tspan").first()).not.toBeEmpty();
   await expect(pointLabel.locator("tspan").nth(1)).not.toBeEmpty();
