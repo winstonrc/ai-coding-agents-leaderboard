@@ -460,6 +460,39 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   expect(consoleErrors).toEqual([]);
 });
 
+test("wide tables fit and secondary details hide before overflow", async ({ page }) => {
+  test.skip(
+    test.info().project.name === "mobile-320",
+    "This test controls its own desktop viewport widths.",
+  );
+  await page.setViewportSize({ width: 1_200, height: 800 });
+  await routeFeed(page);
+  await page.goto("/?formula=v1");
+
+  const tableWrap = page.locator(".table-wrap");
+  expect(await tableWrap.evaluate(
+    (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
+  )).toBe(true);
+  await expect(page.locator(".configuration-detail").first())
+    .toHaveCSS("display", "block");
+  await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(3))
+    .toHaveCSS("white-space", "normal");
+  for (const columnIndex of [0, 2, 5, 6, 7]) {
+    await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(columnIndex))
+      .toHaveCSS("white-space", "nowrap");
+  }
+
+  await page.setViewportSize({ width: 1_010, height: 800 });
+  await expect(page.locator(".configuration-detail").first())
+    .toHaveCSS("display", "none");
+  await expect(page.locator(".secondary-metric").first())
+    .toHaveCSS("display", "none");
+
+  await page.setViewportSize({ width: 1_011, height: 800 });
+  await expect(page.locator(".configuration-detail").first())
+    .toHaveCSS("display", "block");
+});
+
 test("each family labels its highest-value effort and interactions keep positions fixed", async ({ page }) => {
   await routeFeed(page, feed({
     rows: [
