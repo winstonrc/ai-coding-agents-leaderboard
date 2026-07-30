@@ -154,9 +154,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#sort-by")).toHaveValue("value");
   await expect(page.locator("#pareto-only")).not.toBeChecked();
   await expect(page.locator("#retry-button")).toBeHidden();
-  await expect(page.getByRole("navigation").getByRole("link", { name: "AI Coding Agents" }))
+  await expect(page.getByRole("navigation").getByRole("link", {
+    name: "AI Coding Agents Leaderboard",
+  }))
     .toHaveAttribute("href", "./");
-  await expect(page.getByRole("navigation").getByRole("link", { name: "Leaderboard" }))
+  await expect(page.getByRole("heading", { level: 1 }))
+    .toHaveText("AI Coding Agents Leaderboard");
+  await expect(page.getByRole("navigation").getByRole("link", {
+    name: "Leaderboard",
+    exact: true,
+  }))
     .toHaveCount(0);
   await expect(page.getByRole("navigation").getByRole("link", { name: "Methodology" }))
     .toHaveAttribute("href", "./methodology/v1.html");
@@ -497,6 +504,75 @@ test("each family labels its highest-value effort and interactions keep position
   await expect(page.locator(
     '.chart-point-label[data-default-visible="true"]',
   )).toHaveAttribute("data-config", "agent-alpha-high");
+});
+
+test("point hover arms its model line and snaps to nearby effort points", async ({ page }) => {
+  test.skip(
+    test.info().project.name === "mobile-320",
+    "The line corridor is a pointer-hover interaction.",
+  );
+  await routeFeed(page, feed({
+    rows: [
+      row({
+        config: "agent-alpha-medium",
+        reasoning_effort: "medium",
+        mean_cost_usd: 2,
+        mean_duration_seconds: 1_500,
+      }),
+      row(),
+      row({
+        config: "agent-alpha-max",
+        reasoning_effort: "max",
+        pass_at_1: 0.75,
+        mean_cost_usd: 7,
+        mean_duration_seconds: 2_700,
+      }),
+      row({
+        config: "agent-beta-high",
+        model: "model-beta",
+        mean_cost_usd: 6,
+        mean_duration_seconds: 2_100,
+      }),
+    ],
+  }));
+  await page.goto("/?formula=v1");
+
+  const corridor = page.locator(".chart-link-hit-target");
+  await expect(corridor).toHaveCount(1);
+  const high = page.locator(
+    '.chart-point-group[data-config="agent-alpha-high"]',
+  );
+  const max = page.locator(
+    '.chart-point-group[data-config="agent-alpha-max"]',
+  );
+  const highBox = await high.boundingBox();
+  const maxBox = await max.boundingBox();
+  const nearMax = {
+    x: highBox.x + highBox.width / 2
+      + (maxBox.x - highBox.x) * 0.8,
+    y: highBox.y + highBox.height / 2
+      + (maxBox.y - highBox.y) * 0.8,
+  };
+
+  await page.mouse.move(nearMax.x, nearMax.y);
+  await expect(corridor).not.toHaveClass(/is-armed/);
+  await expect(page.locator("#chart-detail")).toBeEmpty();
+
+  await high.hover();
+  await expect(corridor).toHaveClass(/is-armed/);
+  await page.mouse.move(nearMax.x, nearMax.y);
+  await expect(page.locator("#chart-detail")).toContainText(
+    "model-alpha [max]",
+  );
+  await expect(page.locator(
+    '.chart-point-label[data-config="agent-alpha-max"]',
+  )).toHaveClass(/is-active/);
+  await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
+
+  await page.locator("#chart-heading").hover();
+  await expect(corridor).not.toHaveClass(/is-armed/);
+  await expect(page.locator("#chart-detail")).toBeEmpty();
+  await expect(page.locator(".chart-series.is-muted")).toHaveCount(0);
 });
 
 test("dense chart labels avoid other labels and connectors", async ({ page }) => {

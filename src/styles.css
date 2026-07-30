@@ -349,6 +349,17 @@ input[type="range"] {
   stroke: currentColor;
 }
 
+.chart-link-hit-target {
+  fill: none;
+  pointer-events: none;
+  stroke: transparent;
+  stroke-width: 24px;
+}
+
+.chart-link-hit-target.is-armed {
+  pointer-events: stroke;
+}
+
 .chart-point.chart-series {
   fill: currentColor;
   stroke: currentColor;

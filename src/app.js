@@ -840,6 +840,37 @@ function renderChart(configurations) {
   elements.chart.append(crosshair);
 
   const seriesSegments = [];
+  const seriesHitTargets = new Map();
+  const markersByConfig = new Map();
+  let pointerExitFrame = null;
+  let armedGroupId = null;
+  const cancelPointerExit = () => {
+    if (pointerExitFrame === null) return;
+    cancelAnimationFrame(pointerExitFrame);
+    pointerExitFrame = null;
+  };
+  const armSeries = (groupId) => {
+    armedGroupId = groupId;
+    seriesHitTargets.forEach((target, candidateGroupId) => {
+      target.classList.toggle("is-armed", candidateGroupId === groupId);
+    });
+  };
+  const clearPointerInteraction = () => {
+    pointerExitFrame = null;
+    armSeries(null);
+    if (!elements.chart.contains(document.activeElement)) {
+      hideChartDetails();
+    }
+  };
+  const schedulePointerExit = () => {
+    cancelPointerExit();
+    pointerExitFrame = requestAnimationFrame(clearPointerInteraction);
+  };
+  const activatePointerPoint = (configuration, marker, groupId) => {
+    cancelPointerExit();
+    armSeries(groupId);
+    showChartDetails(configuration, marker, groupId);
+  };
   for (const [key, group] of sortedGroups) {
     const sorted = group.sort((left, right) => {
       const leftOrder = EFFORT_ORDER.get(left.reasoningEffort) ?? 6;
@@ -873,6 +904,14 @@ function renderChart(configurations) {
         class: `chart-link chart-series chart-series-${seriesIndex}`,
         "data-chart-group": groupIdentifiers.get(key),
       }));
+      const hitTarget = createSvgElement("path", {
+        d: path,
+        class: "chart-link-hit-target",
+        "data-chart-group": groupIdentifiers.get(key),
+        "aria-hidden": "true",
+      });
+      seriesHitTargets.set(groupIdentifiers.get(key), hitTarget);
+      elements.chart.append(hitTarget);
     }
   }
 
@@ -928,15 +967,44 @@ function renderChart(configurations) {
     );
     markerGroup.addEventListener(
       "mouseenter",
-      () => showChartDetails(configuration, markerGroup, groupId),
+      () => activatePointerPoint(configuration, markerGroup, groupId),
     );
-    markerGroup.addEventListener("mouseleave", hideChartDetails);
+    markerGroup.addEventListener("mouseleave", schedulePointerExit);
     markerGroup.addEventListener(
       "focus",
       () => showChartDetails(configuration, markerGroup, groupId),
     );
     markerGroup.addEventListener("blur", hideChartDetails);
+    markersByConfig.set(configuration.config, markerGroup);
     elements.chart.append(markerGroup);
+  }
+
+  for (const [key, group] of sortedGroups) {
+    const groupId = groupIdentifiers.get(key);
+    const hitTarget = seriesHitTargets.get(groupId);
+    if (!hitTarget) continue;
+    hitTarget.addEventListener("mouseenter", cancelPointerExit);
+    hitTarget.addEventListener("mousemove", (event) => {
+      if (armedGroupId !== groupId) return;
+      const matrix = elements.chart.getScreenCTM();
+      if (!matrix) return;
+      const cursor = new DOMPoint(event.clientX, event.clientY)
+        .matrixTransform(matrix.inverse());
+      const nearest = group.reduce((best, configuration) => {
+        const marker = markersByConfig.get(configuration.config);
+        const distance = Math.hypot(
+          Number(marker.dataset.chartX) - cursor.x,
+          Number(marker.dataset.chartY) - cursor.y,
+        );
+        return best === null || distance < best.distance
+          ? { configuration, distance, marker }
+          : best;
+      }, null);
+      if (nearest) {
+        showChartDetails(nearest.configuration, nearest.marker, groupId);
+      }
+    });
+    hitTarget.addEventListener("mouseleave", schedulePointerExit);
   }
 
   const representatives = sortedGroups
