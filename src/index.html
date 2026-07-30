@@ -81,7 +81,6 @@
         <section class="chart-section" aria-labelledby="chart-heading">
           <div class="section-heading">
             <div>
-              <p class="eyebrow">Selected configurations meeting the success floor</p>
               <h2 id="chart-heading">Amortized cost and agent time per pass</h2>
             </div>
           </div>
@@ -179,48 +178,37 @@
             <table>
               <thead>
                 <tr>
-                  <th
-                    scope="col"
-                    aria-label="Rank among currently shown configurations"
-                    title="Rank among currently shown configurations."
-                  >Rank</th>
-                  <th scope="col">Configuration</th>
+                  <th scope="col">Model</th>
                   <th
                     scope="col"
                     class="numeric"
                     aria-label="Relative value compared with the overall eligible leader"
                     title="Relative to the highest-value configuration meeting the success floor; 1.00× is the leader."
-                  >Relative value</th>
+                  >Value</th>
                   <th
                     scope="col"
                     class="numeric"
                     aria-label="Point-estimate single-attempt success rate"
                     title="Point-estimate single-attempt success rate (Pass@1)."
-                  >Success rate</th>
+                  >Pass@1</th>
                   <th
                     scope="col"
                     class="numeric"
                     aria-label="Tasks solved within four published runs"
                     title="Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable."
-                  >Repeated-run success</th>
+                  >Pass@4</th>
                   <th
                     scope="col"
                     class="numeric"
                     aria-label="Amortized cost per benchmark pass"
                     title="Mean cost per scored attempt divided by the point-estimate single-attempt success rate."
-                  >Amortized cost</th>
+                  ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost</span></th>
                   <th
                     scope="col"
                     class="numeric"
                     aria-label="Amortized agent time per benchmark pass"
                     title="Mean agent time per scored attempt divided by the point-estimate single-attempt success rate."
-                  >Amortized time</th>
-                  <th
-                    scope="col"
-                    class="numeric"
-                    aria-label="Task coverage"
-                    title="Tasks attempted divided by the complete task set."
-                  >Task coverage</th>
+                  ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time</span></th>
                 </tr>
               </thead>
               <tbody id="leaderboard-body"></tbody>

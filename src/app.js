@@ -371,37 +371,25 @@ function compareConfigurations(left, right) {
   return left.config.localeCompare(right.config);
 }
 
-function isTied(left, right) {
-  if (!left || !right) return false;
-  return Object.is(primaryValue(left), primaryValue(right));
-}
-
 function renderTable(configurations) {
   const tableConfigurations = configurations
     .filter((configuration) => !state.paretoOnly || configuration.paretoEfficient)
     .sort(compareConfigurations);
 
   elements.tableBody.replaceChildren();
-  let displayedRank = 0;
 
-  tableConfigurations.forEach((configuration, index) => {
-    if (!isTied(configuration, tableConfigurations[index - 1])) {
-      displayedRank = index + 1;
-    }
-
+  tableConfigurations.forEach((configuration) => {
     const row = document.createElement("tr");
     if (!configuration.paretoEfficient) row.classList.add("is-dominated");
     if (configuration.tasksAttempted < configuration.tasksInSet) {
       row.classList.add("is-partial");
     }
 
-    const rankText = state.sortBy === "persistence" && configuration.runs !== 4
-      ? "—"
-      : String(displayedRank);
-    appendText(row, "td", rankText, "rank-cell");
-
     const nameCell = document.createElement("td");
-    appendText(nameCell, "strong", configurationName(configuration), "configuration-name");
+    const displayName = configuration.tasksAttempted < configuration.tasksInSet
+      ? `${configurationName(configuration)} (${configuration.tasksAttempted}/${configuration.tasksInSet} tasks)`
+      : configurationName(configuration);
+    appendText(nameCell, "strong", displayName, "configuration-name");
     const effort = configuration.reasoningEffort ?? "default";
     const details = [
       configuration.harness,
@@ -417,10 +405,16 @@ function renderTable(configurations) {
     if (configuration.paretoEfficient) {
       details.push("Pareto-efficient among selected models");
     }
-    appendText(nameCell, "span", details.join(" · "), "configuration-detail");
     if (configuration.tasksAttempted < configuration.tasksInSet) {
-      appendText(nameCell, "span", "Partial task coverage", "coverage-warning");
+      details.push(
+        `partial task coverage ${configuration.tasksAttempted}/${configuration.tasksInSet}`,
+      );
     }
+    nameCell.title = `${configurationName(configuration)} · ${details.join(" · ")}`;
+    nameCell.setAttribute(
+      "aria-label",
+      `${configurationName(configuration)}. ${details.join(" · ")}`,
+    );
     row.append(nameCell);
 
     const valueCell = document.createElement("td");
@@ -441,14 +435,15 @@ function renderTable(configurations) {
     appendText(row, "td", performanceText, "numeric");
     const persistenceCell = document.createElement("td");
     persistenceCell.className = "numeric";
-    appendText(persistenceCell, "span", formatPercent(configuration.passAt4));
-    appendText(
-      persistenceCell,
-      "span",
-      configuration.runs === 4
-        ? `${configuration.tasksPassedAny}/${configuration.tasksAttempted} tasks within 4 runs`
-        : `${configuration.runs} published runs; not comparable`,
-      "secondary-metric",
+    persistenceCell.textContent = configuration.runs === 4
+      ? formatPercent(configuration.passAt4)
+      : "—";
+    persistenceCell.title = configuration.runs === 4
+      ? `${configuration.tasksPassedAny}/${configuration.tasksAttempted} tasks within 4 runs`
+      : `${configuration.runs} published runs; not comparable`;
+    persistenceCell.setAttribute(
+      "aria-label",
+      `${persistenceCell.textContent}. ${persistenceCell.title}`,
     );
     row.append(persistenceCell);
     appendText(
@@ -463,13 +458,6 @@ function renderTable(configurations) {
       formatDuration(configuration.amortizedAgentTimePerPassMinutes),
       "numeric",
     );
-    appendText(
-      row,
-      "td",
-      `${configuration.tasksAttempted}/${configuration.tasksInSet}`,
-      "numeric",
-    );
-
     elements.tableBody.append(row);
   });
 
@@ -522,9 +510,9 @@ function showChartDetails(configuration, marker, groupId) {
   costLabel.textContent = formatCurrency(configuration.amortizedCostPerPassUsd);
   const timeLabel = crosshair.querySelector(".chart-crosshair-time");
   timeLabel.setAttribute("y", String(Number(yPosition) + 4));
-  timeLabel.textContent = formatDuration(
-    configuration.amortizedAgentTimePerPassMinutes,
-  );
+  timeLabel.textContent = elements.chart.classList.contains("is-compact")
+    ? formatNumber(configuration.amortizedAgentTimePerPassMinutes)
+    : formatDuration(configuration.amortizedAgentTimePerPassMinutes);
 
   elements.chart.querySelectorAll(".chart-point-label.is-active").forEach((label) => {
     label.classList.remove("is-active");
@@ -573,17 +561,26 @@ function connectorEnd(point, rectangle) {
   };
 }
 
-function labelRectangles(point, width, height, bounds) {
-  const positions = [16, 28, 40, 52].flatMap((offset) => [
-    { left: point.x + offset, top: point.y - offset - height },
-    { left: point.x + offset, top: point.y - height / 2 },
-    { left: point.x + offset, top: point.y + offset },
-    { left: point.x - width / 2, top: point.y + offset },
-    { left: point.x - offset - width, top: point.y + offset },
-    { left: point.x - offset - width, top: point.y - height / 2 },
-    { left: point.x - offset - width, top: point.y - offset - height },
-    { left: point.x - width / 2, top: point.y - offset - height },
-  ]);
+function labelRectangles(point, width, height, bounds, offsets, diagonalOnly) {
+  const positions = offsets.flatMap((offset) => {
+    const diagonalPositions = [
+      { left: point.x + offset, top: point.y - offset - height },
+      { left: point.x + offset, top: point.y + offset },
+      { left: point.x - offset - width, top: point.y + offset },
+      { left: point.x - offset - width, top: point.y - offset - height },
+    ];
+    if (diagonalOnly) return diagonalPositions;
+    return [
+      diagonalPositions[0],
+      { left: point.x + offset, top: point.y - height / 2 },
+      diagonalPositions[1],
+      { left: point.x - width / 2, top: point.y + offset },
+      diagonalPositions[2],
+      { left: point.x - offset - width, top: point.y - height / 2 },
+      diagonalPositions[3],
+      { left: point.x - width / 2, top: point.y - offset - height },
+    ];
+  });
   return positions.map((position, index) => {
     const left = Math.max(
       bounds.left,
@@ -612,8 +609,10 @@ function chooseLabelRectangle({
   points,
   segments,
   width,
+  offsets = [16, 28, 40, 52],
+  diagonalOnly = false,
 }) {
-  return labelRectangles(point, width, height, bounds)
+  return labelRectangles(point, width, height, bounds, offsets, diagonalOnly)
     .map((rectangle) => {
       const connector = connectorEnd(point, rectangle);
       const connectorSegment = { start: point, end: connector };
@@ -670,12 +669,13 @@ function chooseLabelRectangle({
         connectorSegment,
         rectangle,
         score: [
+          diagonalOnly ? axisAlignedConnector : 0,
           coversTarget,
           labelOverlap,
           pointOverlaps,
           lineIntersections,
           connectorObstructions,
-          axisAlignedConnector,
+          diagonalOnly ? 0 : axisAlignedConnector,
           Math.hypot(connector.x - point.x, connector.y - point.y),
           rectangle.index,
         ],
@@ -702,11 +702,18 @@ function niceStep(maximum, targetIntervals = 6) {
 
 function renderChart(configurations) {
   clearChart();
+  const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
+  const compact = renderedWidth < 720;
+  const chartWidth = compact ? Math.max(280, Math.round(renderedWidth)) : 960;
+  const chartHeight = compact ? 500 : 430;
+  elements.chart.setAttribute("viewBox", `0 0 ${chartWidth} ${chartHeight}`);
+  elements.chart.classList.toggle("is-compact", compact);
+
   const finite = configurations.filter(isFiniteChartConfiguration);
   if (finite.length === 0) {
     const message = createSvgElement("text", {
-      x: 480,
-      y: 215,
+      x: chartWidth / 2,
+      y: chartHeight / 2,
       "text-anchor": "middle",
       class: "chart-note",
     });
@@ -715,9 +722,11 @@ function renderChart(configurations) {
     return;
   }
 
-  const margin = { top: 28, right: 34, bottom: 62, left: 92 };
-  const width = 960 - margin.left - margin.right;
-  const height = 430 - margin.top - margin.bottom;
+  const margin = compact
+    ? { top: 24, right: 24, bottom: 52, left: 58 }
+    : { top: 28, right: 34, bottom: 62, left: 92 };
+  const width = chartWidth - margin.left - margin.right;
+  const height = chartHeight - margin.top - margin.bottom;
   const maximumCost = Math.max(
     ...finite.map((configuration) => configuration.amortizedCostPerPassUsd),
   );
@@ -775,14 +784,14 @@ function renderChart(configurations) {
       "text-anchor": "end",
       class: "chart-tick chart-time-tick",
     });
-    label.textContent = `${formatNumber(time)} min`;
+    label.textContent = compact ? formatNumber(time) : `${formatNumber(time)} min`;
     grid.append(label);
   }
   elements.chart.append(grid);
 
   const xLabel = createSvgElement("text", {
     x: margin.left + width / 2,
-    y: 420,
+    y: chartHeight - 10,
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
@@ -790,13 +799,15 @@ function renderChart(configurations) {
   elements.chart.append(xLabel);
 
   const yLabel = createSvgElement("text", {
-    x: 18,
+    x: compact ? 20 : 18,
     y: margin.top + height / 2,
-    transform: `rotate(-90 18 ${margin.top + height / 2})`,
+    transform: `rotate(-90 ${compact ? 20 : 18} ${margin.top + height / 2})`,
     "text-anchor": "middle",
     class: "chart-axis-label",
   });
-  yLabel.textContent = "Amortized agent time per pass";
+  yLabel.textContent = compact
+    ? "Amortized agent time per pass (minutes)"
+    : "Amortized agent time per pass";
   elements.chart.append(yLabel);
 
   const groups = new Map();
@@ -1091,6 +1102,8 @@ function renderChart(configurations) {
       points,
       segments: seriesSegments,
       width: textBounds.width,
+      offsets: compact ? [16, 28, 40, 52, 64, 76, 88] : undefined,
+      diagonalOnly: compact,
     });
     const textX = placement.rectangle.left - textBounds.x;
     const textY = placement.rectangle.top - textBounds.y;
@@ -1183,6 +1196,17 @@ elements.paretoOnly.addEventListener("change", () => {
 elements.selectAllModels.addEventListener("click", () => setAllModels(true));
 elements.clearModels.addEventListener("click", () => setAllModels(false));
 elements.retryButton.addEventListener("click", loadFeed);
+let resizeFrame = null;
+window.addEventListener("resize", () => {
+  if (!state.feed) return;
+  if (resizeFrame !== null) {
+    cancelAnimationFrame(resizeFrame);
+  }
+  resizeFrame = requestAnimationFrame(() => {
+    resizeFrame = null;
+    render();
+  });
+});
 document.addEventListener("pointerdown", (event) => {
   if (!elements.chart.classList.contains("is-interacting")) return;
   if (event.target instanceof Element && event.target.closest(".chart-point-group")) {

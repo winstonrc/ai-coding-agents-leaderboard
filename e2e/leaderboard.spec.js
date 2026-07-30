@@ -105,27 +105,25 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-axis-label").first())
     .toHaveText("Amortized cost per pass");
   await expect(page.locator(".chart-axis-label").last())
-    .toHaveText("Amortized agent time per pass");
-  await expect(page.locator("thead th")).toHaveText([
-    "Rank",
-    "Configuration",
-    "Relative value",
-    "Success rate",
-    "Repeated-run success",
-    "Amortized cost",
-    "Amortized time",
-    "Task coverage",
+    .toHaveText(
+      test.info().project.name === "mobile-320"
+        ? "Amortized agent time per pass (minutes)"
+        : "Amortized agent time per pass",
+    );
+  expect(await page.locator("thead th").evaluateAll(
+    (headers) => headers.map((header) => header.innerText.trim()),
+  )).toEqual([
+    "Model",
+    "Value",
+    "Pass@1",
+    "Pass@4",
+    test.info().project.name === "mobile-320" ? "Cost" : "Cost/pass",
+    test.info().project.name === "mobile-320" ? "Time" : "Time/pass",
   ]);
   await expect(page.locator("#leaderboard-body td").first())
     .toHaveCSS("vertical-align", "top");
-  await expect(page.locator(".configuration-detail").first()).toHaveCSS(
-    "display",
-    test.info().project.name === "mobile-320" ? "none" : "block",
-  );
-  await expect(page.locator(".secondary-metric").first()).toHaveCSS(
-    "display",
-    test.info().project.name === "mobile-320" ? "none" : "block",
-  );
+  await expect(page.locator("#leaderboard-body tr").first().locator("td"))
+    .toHaveCount(6);
   await expect(page.getByRole("columnheader", {
     name: "Relative value compared with the overall eligible leader",
   })).toHaveAttribute(
@@ -141,14 +139,12 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   expect(await page.locator("thead th").evaluateAll((headers) => (
     headers.map((header) => header.getAttribute("title"))
   ))).toEqual([
-    "Rank among currently shown configurations.",
     null,
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
     "Point-estimate single-attempt success rate (Pass@1).",
     "Share of attempted tasks solved in at least one of four published runs. Rows with a different run count are not directly comparable.",
     "Mean cost per scored attempt divided by the point-estimate single-attempt success rate.",
     "Mean agent time per scored attempt divided by the point-estimate single-attempt success rate.",
-    "Tasks attempted divided by the complete task set.",
   ]);
   await expect(page.locator("#model-filter-summary")).toHaveText("Models (4/4)");
   await expect(page.locator("#sort-by")).toHaveValue("value");
@@ -264,11 +260,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "$10",
   ]);
   await expect(page.locator(".chart-time-tick")).toHaveText([
-    "0 min",
-    "10 min",
-    "20 min",
-    "30 min",
-    "40 min",
+    ...(test.info().project.name === "mobile-320"
+      ? ["0", "10", "20", "30", "40"]
+      : ["0 min", "10 min", "20 min", "30 min", "40 min"]),
   ]);
   const chartBottom = Number(
     await page.locator(".chart-time-tick").first().getAttribute("y"),
@@ -336,12 +330,16 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(3);
   await expect(page.locator("#leaderboard-body tr").first())
     .toContainText("80.0%");
-  await expect(page.locator("#leaderboard-body tr").first())
-    .toContainText("within 4 runs");
+  await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(3))
+    .toHaveAttribute("title", /within 4 runs/);
   await expect(page.locator("#leaderboard-body tr").first().locator(".relative-value"))
     .toHaveText("1.00×");
   await expect(page.locator("#leaderboard-body")).not.toContainText("Formula v1 index");
-  await expect(page.getByText("Partial task coverage")).toBeVisible();
+  const partialModelCell = page.locator("#leaderboard-body tr")
+    .filter({ hasText: "model-beta" })
+    .locator("td").first();
+  await expect(partialModelCell).toContainText("(90/100 tasks)");
+  await expect(partialModelCell).toHaveAttribute("title", /partial task coverage/);
   await expect(page.getByRole("heading", { name: "Data and methodology" })).toBeVisible();
   await expect(page.locator(".provenance dt").filter({ hasText: "Source" })).toBeVisible();
   await expect(page.getByRole("link", { name: "Published aggregate feed (v1.1)" }))
@@ -377,10 +375,19 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await page.locator("#performance-floor").fill("50");
   await expect(page.locator("#performance-floor-value")).toHaveText("≥50%");
   await expect(page.locator(".chart-point-group")).toHaveCount(4);
+  await expect(page.locator(
+    '.chart-point-label[data-default-visible="true"]',
+  )).toHaveCount(4);
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(4);
 
-  const hoveredConfig = await page.locator(".chart-point-group").first()
-    .getAttribute("data-config");
+  const hoveredConfig = test.info().project.name === "mobile-320"
+    ? await page.locator(
+      '.chart-point-label[data-default-visible="true"]',
+    ).first().getAttribute("data-config")
+    : await page.locator(".chart-point-group").first().getAttribute("data-config");
+  const hoveredMarker = page.locator(
+    `.chart-point-group[data-config="${hoveredConfig}"]`,
+  );
   const pointLabel = page.locator(
     `.chart-point-label[data-config="${hoveredConfig}"]`,
   );
@@ -393,7 +400,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   const controlsTopBeforeHover = await page.locator(".controls").evaluate(
     (controls) => controls.getBoundingClientRect().top + window.scrollY,
   );
-  await page.locator(".chart-point-group").first().hover();
+  await hoveredMarker.hover();
   await expect(page.locator("#chart-detail"))
     .toContainText("single-attempt");
   await expect(page.locator("#chart-detail")).toContainText("over 4 runs");
@@ -401,8 +408,8 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#chart-detail")).toContainText("amortized time");
   await expect(page.locator("#chart-detail")).toContainText("value");
   await expect(pointLabel).toHaveClass(/is-active/);
-  await expect(pointLabel.locator("tspan").first()).toHaveText("model-alpha");
-  await expect(pointLabel.locator("tspan").nth(1)).toHaveText("HIGH");
+  await expect(pointLabel.locator("tspan").first()).not.toBeEmpty();
+  await expect(pointLabel.locator("tspan").nth(1)).not.toBeEmpty();
   await expect(pointLabel.locator("text")).toHaveAttribute(
     "x",
     persistentLabelPosition.x,
@@ -411,14 +418,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "y",
     persistentLabelPosition.y,
   );
-  await expect(pointLabel.locator("text")).toHaveCSS("fill", "rgb(180, 83, 9)");
-  await expect(pointLabel.locator("line")).toHaveCSS(
-    "stroke",
-    "rgb(180, 83, 9)",
-  );
+  if (test.info().project.name === "desktop") {
+    await expect(pointLabel.locator("text")).toHaveCSS("fill", "rgb(180, 83, 9)");
+    await expect(pointLabel.locator("line")).toHaveCSS(
+      "stroke",
+      "rgb(180, 83, 9)",
+    );
+  }
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-crosshair-cost")).toContainText("$");
-  await expect(page.locator(".chart-crosshair-time")).toContainText("min");
+  if (test.info().project.name === "mobile-320") {
+    await expect(page.locator(".chart-crosshair-time")).toHaveText(/^\d+$/);
+  } else {
+    await expect(page.locator(".chart-crosshair-time")).toContainText("min");
+  }
   await expect(page.locator(".chart-crosshair-cost")).toHaveCSS(
     "paint-order",
     "stroke",
@@ -428,7 +441,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     "4px",
   );
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
-  await expect(page.locator(".chart-point-group").first().locator(".chart-point"))
+  await expect(hoveredMarker.locator(".chart-point"))
     .not.toHaveClass(/is-muted/);
   expect(await page.locator(".controls").evaluate(
     (controls) => controls.getBoundingClientRect().top + window.scrollY,
@@ -466,19 +479,51 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator("#cost-priority-value")).toHaveText("0% cost · 100% time");
 
   if (test.info().project.name === "mobile-320") {
+    await expect(page.locator(".nav-content")).toHaveCSS("white-space", "nowrap");
+    await expect(page.locator(".nav-content")).toHaveCSS("flex-direction", "row");
     const chartDimensions = await page.locator(".chart-wrap").evaluate((wrapper) => ({
       clientWidth: wrapper.clientWidth,
       scrollWidth: wrapper.scrollWidth,
     }));
-    expect(chartDimensions.scrollWidth).toBeGreaterThan(chartDimensions.clientWidth);
+    expect(chartDimensions.scrollWidth).toBeLessThanOrEqual(chartDimensions.clientWidth);
     const targetBox = await page.locator(".chart-hit-target").first().boundingBox();
     expect(targetBox.width).toBeGreaterThanOrEqual(24);
     expect(targetBox.height).toBeGreaterThanOrEqual(24);
+    const tableDimensions = await page.locator(".table-wrap").evaluate((wrapper) => ({
+      clientWidth: wrapper.clientWidth,
+      scrollWidth: wrapper.scrollWidth,
+    }));
+    expect(tableDimensions.scrollWidth - tableDimensions.clientWidth)
+      .toBeLessThanOrEqual(60);
+    const visibleHeaders = await page.locator("thead th:visible").evaluateAll(
+      (headers) => headers.map((header) => ({
+        clientWidth: header.clientWidth,
+        scrollWidth: header.scrollWidth,
+      })),
+    );
+    for (const header of visibleHeaders) {
+      expect(header.scrollWidth).toBeLessThanOrEqual(header.clientWidth);
+    }
+    const numericCells = await page.locator(
+      "#leaderboard-body tr:first-child td.numeric:visible",
+    ).evaluateAll((cells) => cells.map((cell) => ({
+      clientWidth: cell.clientWidth,
+      scrollWidth: cell.scrollWidth,
+    })));
+    for (const cell of numericCells) {
+      expect(cell.scrollWidth).toBeLessThanOrEqual(cell.clientWidth);
+    }
+    for (const columnIndex of [3]) {
+      await expect(page.locator("thead th").nth(columnIndex)).toBeHidden();
+    }
+    await expect(page.locator("thead")).toContainText("Value");
+    await expect(page.locator("thead")).toContainText("Cost");
+    await expect(page.locator("thead")).toContainText("Time");
   }
   expect(consoleErrors).toEqual([]);
 });
 
-test("wide tables fit and secondary details hide before overflow", async ({ page }) => {
+test("wide tables fit without supplemental row details", async ({ page }) => {
   test.skip(
     test.info().project.name === "mobile-320",
     "This test controls its own desktop viewport widths.",
@@ -491,27 +536,29 @@ test("wide tables fit and secondary details hide before overflow", async ({ page
   expect(await tableWrap.evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
-  await expect(page.locator(".configuration-detail").first())
-    .toHaveCSS("display", "block");
   await expect(tableWrap).toHaveAttribute("role", "region");
   await expect(tableWrap).toHaveAttribute("aria-labelledby", "table-heading");
   await expect(tableWrap).toHaveAttribute("tabindex", "0");
-  await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(3))
-    .toHaveCSS("white-space", "normal");
-  for (const columnIndex of [0, 2, 5, 6, 7]) {
+  for (const columnIndex of [1, 2, 3, 4, 5]) {
     await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(columnIndex))
       .toHaveCSS("white-space", "nowrap");
   }
+});
 
-  await page.setViewportSize({ width: 1_010, height: 800 });
-  await expect(page.locator(".configuration-detail").first())
-    .toHaveCSS("display", "none");
-  await expect(page.locator(".secondary-metric").first())
-    .toHaveCSS("display", "none");
+test("iPhone-width chart and table fit without horizontal scrolling", async ({ page }) => {
+  test.skip(
+    test.info().project.name === "mobile-320",
+    "This test controls its own iPhone-width viewport.",
+  );
+  await page.setViewportSize({ width: 402, height: 874 });
+  await routeFeed(page);
+  await page.goto("/?formula=v1");
 
-  await page.setViewportSize({ width: 1_011, height: 800 });
-  await expect(page.locator(".configuration-detail").first())
-    .toHaveCSS("display", "block");
+  for (const selector of [".nav-content", ".chart-wrap", ".table-wrap"]) {
+    expect(await page.locator(selector).evaluate(
+      (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
+    )).toBe(true);
+  }
 });
 
 test("methodology heading aligns with its reading column", async ({ page }) => {
@@ -717,7 +764,9 @@ test("shared model filter applies to the chart and table", async ({ page }) => {
   await expect(page.locator(".chart-point-group")).toHaveCount(3);
 });
 
-test("repeated-run sorting leaves non-four-run rows unranked", async ({ page }) => {
+test("repeated-run sorting places non-four-run rows last and marks them unavailable", async ({
+  page,
+}) => {
   await routeFeed(page, feed({
     rows: [
       row({
@@ -750,9 +799,10 @@ test("repeated-run sorting leaves non-four-run rows unranked", async ({ page }) 
     "four-run-lower [high]",
     "two-run [high]",
   ]);
-  await expect(page.locator(".rank-cell")).toHaveText(["1", "2", "—"]);
-  await expect(page.locator("#leaderboard-body tr").last())
-    .toContainText("2 published runs; not comparable");
+  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(3))
+    .toHaveText("—");
+  await expect(page.locator("#leaderboard-body tr").last().locator("td").nth(3))
+    .toHaveAttribute("title", "2 published runs; not comparable");
 });
 
 test("Pareto status ignores configurations below the success floor", async ({ page }) => {
@@ -778,8 +828,8 @@ test("Pareto status ignores configurations below the success floor", async ({ pa
 
   await expect(page.locator(".chart-point-group")).toHaveCount(1);
   await expect(page.locator(".chart-point-pareto")).toHaveCount(1);
-  await expect(page.locator("#leaderboard-body"))
-    .toContainText("Pareto-efficient among selected models");
+  await expect(page.locator("#leaderboard-body td").first())
+    .toHaveAttribute("title", /Pareto-efficient among selected models/);
 });
 
 test("chart count excludes zero-pass configurations omitted from the plot", async ({ page }) => {
@@ -810,7 +860,7 @@ test("equal scores remain tied with configuration ID as fallback", async ({ page
   await page.goto("/");
 
   await expect(page.locator("#leaderboard-body tr")).toHaveCount(2);
-  await expect(page.locator(".rank-cell")).toHaveText(["1", "1"]);
+  await expect(page.locator(".relative-value")).toHaveText(["1.00×", "1.00×"]);
   await expect(page.locator("#leaderboard-body .configuration-name")).toHaveText([
     "model-a [high]",
     "model-b [high]",
@@ -831,11 +881,10 @@ test("external labels are inserted as text and optional metrics show unavailable
 
   await expect(page.locator("#leaderboard-body")).toContainText("<img src=x");
   await expect(page.locator("#leaderboard-body img")).toHaveCount(0);
-  await expect(page.locator(".configuration-detail")).toContainText("CI —");
-  await expect(page.locator(".configuration-detail")).toContainText("output tokens —");
-  await expect(page.locator(".configuration-detail")).toContainText("steps —");
-  await expect(page.locator(".configuration-detail")).toContainText("median attempt —");
-  await expect(page.locator(".configuration-detail")).not.toContainText("note");
+  await expect(page.locator("#leaderboard-body td").first())
+    .toHaveAttribute("title", /CI —.*output tokens —.*steps —.*median attempt —/);
+  await expect(page.locator("#leaderboard-body td").first())
+    .not.toHaveAttribute("title", /note/);
   expect(await page.evaluate(() => window.injection)).toBeUndefined();
 });
 
@@ -855,12 +904,13 @@ test("notes render only when supplied by the source", async ({ page }) => {
 
   const alphaDetails = page.locator("#leaderboard-body tr")
     .filter({ hasText: "model-alpha" })
-    .locator(".configuration-detail");
+    .locator("td").first();
   const betaDetails = page.locator("#leaderboard-body tr")
     .filter({ hasText: "model-beta" })
-    .locator(".configuration-detail");
-  await expect(alphaDetails).not.toContainText("note");
-  await expect(betaDetails).toContainText("note Uses an alternate tool configuration.");
+    .locator("td").first();
+  await expect(alphaDetails).not.toHaveAttribute("title", /note/);
+  await expect(betaDetails)
+    .toHaveAttribute("title", /note Uses an alternate tool configuration\./);
 });
 
 test("unsupported formulas fail without contacting the source", async ({ page }) => {

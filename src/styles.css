@@ -122,8 +122,6 @@ main {
 
 .control output,
 .visible-count,
-.configuration-detail,
-.secondary-metric,
 .chart-detail {
   color: GrayText;
 }
@@ -351,11 +349,6 @@ input[type="range"] {
   visibility: visible;
 }
 
-.secondary-metric {
-  display: block;
-  font-size: 0.8rem;
-}
-
 .chart-link.chart-series {
   fill: none;
   stroke: currentColor;
@@ -474,13 +467,12 @@ input[type="range"] {
 
 table {
   width: 100%;
-  min-width: 900px;
   border-collapse: collapse;
 }
 
-th:nth-child(2),
-td:nth-child(2) {
-  min-width: 240px;
+th:first-child,
+td:first-child {
+  min-width: 220px;
 }
 
 th,
@@ -501,26 +493,18 @@ th {
 }
 
 td.numeric {
-  white-space: normal;
-}
-
-td:nth-child(1),
-td:nth-child(3),
-td:nth-child(6),
-td:nth-child(7),
-td:nth-child(8) {
   white-space: nowrap;
 }
 
-.configuration-detail,
-.coverage-warning {
+.configuration-name {
   display: block;
-  margin-top: 3px;
-  font-size: 0.8rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
-.coverage-warning {
-  font-weight: bold;
+.compact-column-label {
+  display: none;
 }
 
 .empty-state {
@@ -572,13 +556,6 @@ code {
   font-family: ui-monospace, SFMono-Regular, Consolas, monospace;
 }
 
-@media (max-width: 1010px) {
-  .table-wrap .configuration-detail,
-  .table-wrap .secondary-metric {
-    display: none;
-  }
-}
-
 @media (max-width: 720px) {
   .priority-grid,
   .model-options,
@@ -600,25 +577,98 @@ code {
   .chart-legend {
     justify-content: flex-start;
     padding-right: 0;
-  }
-
-  .chart-tick,
-  .chart-axis-label,
-  .chart-note,
-  .chart-label {
-    font-size: 16px;
-  }
-
-  .value-chart {
-    min-width: 960px;
+    margin: 8px 8px 0;
   }
 
   .chart-detail {
     height: 7.5rem;
   }
 
+  table {
+    min-width: 0;
+    table-layout: fixed;
+    font-size: 0.8rem;
+  }
+
+  th,
+  td {
+    padding: 8px 2px;
+    overflow-wrap: anywhere;
+  }
+
+  th {
+    font-size: 0.7rem;
+    white-space: nowrap;
+  }
+
+  th:nth-child(4),
+  td:nth-child(4) {
+    display: none;
+  }
+
+  th:nth-child(1),
+  td:nth-child(1) {
+    width: 44%;
+    min-width: 0;
+  }
+
+  th:nth-child(2),
+  td:nth-child(2) {
+    width: 12%;
+  }
+
+  th:nth-child(3),
+  td:nth-child(3) {
+    width: 16.5%;
+  }
+
+  th:nth-child(5),
+  td:nth-child(5),
+  th:nth-child(6),
+  td:nth-child(6) {
+    width: 14%;
+  }
+
+  td:nth-child(3) {
+    white-space: normal;
+  }
+
+  tr.is-partial .configuration-name {
+    overflow: visible;
+    white-space: normal;
+  }
+
+  .configuration-name {
+    font-size: 0.75rem;
+  }
+
+  .wide-column-label {
+    display: none;
+  }
+
+  .compact-column-label {
+    display: inline;
+  }
+
   .nav-content {
-    align-items: flex-start;
-    flex-direction: column;
+    overflow-x: auto;
+    font-size: 0.875rem;
+    white-space: nowrap;
+  }
+
+  .nav-content > a,
+  .nav-links {
+    flex: none;
+  }
+
+  .nav-links {
+    flex-wrap: nowrap;
+    gap: 16px;
+  }
+}
+
+@media (max-width: 360px) {
+  table {
+    min-width: 340px;
   }
 }
