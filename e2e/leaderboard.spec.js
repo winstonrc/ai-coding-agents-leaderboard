@@ -110,7 +110,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".priority-scale span").first()).toHaveText("Time");
   await expect(page.locator(".priority-scale span").last()).toHaveText("Cost");
   await expect(page.getByText(
-    "Minimum point-estimate 1-run success",
+    "Minimum 1-run success rate",
     { exact: true },
   )).toBeVisible();
   expect(await page.locator("#sort-by option").evaluateAll(
