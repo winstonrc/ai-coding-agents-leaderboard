@@ -2,7 +2,7 @@
 
 :root {
   color-scheme: light;
-  font-family: Verdana, sans-serif;
+  font-family: system-ui, sans-serif;
   line-height: 1.5;
 }
 
@@ -204,8 +204,15 @@ input[type="range"] {
   justify-content: flex-end;
   gap: 12px;
   padding-right: 3.54%;
-  margin: 24px 0 -10px;
+  margin: 12px 0 -24px;
   font-size: 0.85rem;
+}
+
+.chart-intro {
+  max-width: 75ch;
+  margin-bottom: 0;
+  color: GrayText;
+  font-size: 0.9rem;
 }
 
 .chart-legend .legend-item {
@@ -229,6 +236,11 @@ input[type="range"] {
 
 .pareto-marker {
   background: Highlight;
+}
+
+.chart-frame {
+  margin-top: 12px;
+  border: 1px solid #ddd;
 }
 
 .chart-wrap {
@@ -301,7 +313,7 @@ input[type="range"] {
 
 .chart-label {
   font-size: 13px;
-  font-weight: normal;
+  font-weight: 600;
   paint-order: stroke;
   pointer-events: none;
   stroke: Canvas;

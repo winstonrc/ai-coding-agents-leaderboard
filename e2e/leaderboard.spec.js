@@ -245,12 +245,15 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   }
   const chartLabelStyles = await page.locator(".chart-label").evaluateAll((labels) => (
     labels.map((label) => ({
+      fontWeight: getComputedStyle(label).fontWeight,
       paintOrder: getComputedStyle(label).paintOrder,
       strokeWidth: getComputedStyle(label).strokeWidth,
     }))
   ));
   expect(chartLabelStyles.every((style) => (
-    style.paintOrder === "stroke" && style.strokeWidth === "4px"
+    style.fontWeight === "600"
+      && style.paintOrder === "stroke"
+      && style.strokeWidth === "4px"
   ))).toBe(true);
   await expect(page.locator(".chart-cost-tick")).toHaveText([
     "$0",

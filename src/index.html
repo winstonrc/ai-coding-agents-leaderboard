@@ -85,34 +85,36 @@
               <h2 id="chart-heading">Amortized cost and agent time per pass</h2>
             </div>
           </div>
-          <p>
+          <p class="chart-intro">
             The table applies the selected cost/time weighting; the chart shows the
             underlying trade-off. Repeated-run success is supplemental and does not
             affect value or Pareto status. The bottom-left is more efficient.
           </p>
-          <div class="chart-legend" aria-label="Chart legend">
-            <span class="legend-item">
-              <i class="legend-marker pareto-marker"></i>Pareto-efficient
-            </span>
-            <span class="legend-item">
-              <i class="legend-marker"></i>Not Pareto-efficient
-            </span>
-          </div>
-          <div class="chart-wrap">
-            <svg
-              id="value-chart"
-              class="value-chart"
-              viewBox="0 0 960 430"
-              role="group"
-              aria-label="Amortized cost and agent time per benchmark pass"
-              aria-describedby="chart-description"
-            >
-              <desc id="chart-description">
-                Amortized cost per pass appears horizontally. Amortized agent time per
-                pass appears vertically. Points closer to the bottom-left are
-                more efficient. Diamonds are Pareto-efficient among selected models.
-              </desc>
-            </svg>
+          <div class="chart-frame">
+            <div class="chart-legend" aria-label="Chart legend">
+              <span class="legend-item">
+                <i class="legend-marker pareto-marker"></i>Pareto-efficient
+              </span>
+              <span class="legend-item">
+                <i class="legend-marker"></i>Not Pareto-efficient
+              </span>
+            </div>
+            <div class="chart-wrap">
+              <svg
+                id="value-chart"
+                class="value-chart"
+                viewBox="0 0 960 430"
+                role="group"
+                aria-label="Amortized cost and agent time per benchmark pass"
+                aria-describedby="chart-description"
+              >
+                <desc id="chart-description">
+                  Amortized cost per pass appears horizontally. Amortized agent time per
+                  pass appears vertically. Points closer to the bottom-left are
+                  more efficient. Diamonds are Pareto-efficient among selected models.
+                </desc>
+              </svg>
+            </div>
           </div>
           <p id="chart-detail" class="chart-detail" aria-live="polite"></p>
         </section>
