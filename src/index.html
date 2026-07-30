@@ -172,7 +172,7 @@
           </div>
           <div class="filter-row" role="group" aria-label="Table controls">
             <label class="select-control" for="sort-by">
-              <span>Rank table by</span>
+              <span>Rank</span>
               <select id="sort-by">
                 <option value="value">Relative value</option>
                 <option value="performance">1-run success</option>
@@ -183,9 +183,10 @@
             </label>
             <label class="switch-control" for="pareto-only">
               <input id="pareto-only" type="checkbox">
-              <span>Pareto-efficient among selected models only</span>
+              <span>Pareto-efficient</span>
             </label>
             <p id="visible-count" class="visible-count"></p>
+            <button id="reset-controls" type="button" disabled>Reset</button>
           </div>
           <div
             class="table-wrap"

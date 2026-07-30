@@ -585,6 +585,35 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   expect(consoleErrors).toEqual([]);
 });
 
+test("reset controls restores every published default", async ({ page }) => {
+  await routeFeed(page);
+  await page.goto("/?formula=v1");
+
+  const resetControls = page.locator("#reset-controls");
+  await expect(resetControls).toBeDisabled();
+
+  await page.locator("#cost-priority").fill("75");
+  await page.locator("#performance-floor").fill("50");
+  await page.locator("#sort-by").selectOption("speed");
+  await page.locator("#pareto-only").check();
+  await page.locator("#model-filter-summary").click();
+  await page.locator("#model-options input").first().uncheck();
+  await expect(resetControls).toBeEnabled();
+
+  await resetControls.click();
+
+  await expect(page.locator("#cost-priority")).toHaveValue("50");
+  await expect(page.locator("#cost-priority-value")).toHaveText(
+    "50% Time · 50% Cost",
+  );
+  await expect(page.locator("#performance-floor")).toHaveValue("60");
+  await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
+  await expect(page.locator("#sort-by")).toHaveValue("value");
+  await expect(page.locator("#pareto-only")).not.toBeChecked();
+  await expect(page.locator("#model-options input:not(:checked)")).toHaveCount(0);
+  await expect(resetControls).toBeDisabled();
+});
+
 test("wide tables fit without supplemental row details", async ({ page }) => {
   test.skip(
     test.info().project.name === "mobile-320",

@@ -31,6 +31,8 @@ import {
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
 const PUBLISHED_FEED_METADATA_URL = "./data/feed-metadata.json";
+const DEFAULT_PERFORMANCE_FLOOR = 0.6;
+const DEFAULT_SORT_BY = "value";
 const LABEL_CONNECTOR_POINT_CLEARANCE = 9;
 const EFFORT_ORDER = new Map([
   ["low", 0],
@@ -58,6 +60,7 @@ const elements = {
   sortBy: document.querySelector("#sort-by"),
   paretoOnly: document.querySelector("#pareto-only"),
   visibleCount: document.querySelector("#visible-count"),
+  resetControls: document.querySelector("#reset-controls"),
   chart: document.querySelector("#value-chart"),
   chartDetail: document.querySelector("#chart-detail"),
   tableBody: document.querySelector("#leaderboard-body"),
@@ -71,9 +74,9 @@ const state = {
   feed: null,
   fetchedAt: null,
   priorities: { ...FORMULA_V1.defaultPriorities },
-  performanceFloor: 0.6,
+  performanceFloor: DEFAULT_PERFORMANCE_FLOOR,
   selectedModelKeys: new Set(),
-  sortBy: "value",
+  sortBy: DEFAULT_SORT_BY,
   paretoOnly: false,
 };
 
@@ -277,6 +280,20 @@ function createSeriesMap(configurations) {
 
 function updateModelFilterSummary(total) {
   elements.modelFilterSummary.textContent = `Models (${state.selectedModelKeys.size}/${total})`;
+}
+
+function updateResetControlsButton() {
+  const modelInputs = [...elements.modelOptions.querySelectorAll("input[type=checkbox]")];
+  elements.resetControls.disabled = (
+    state.priorities.amortizedCostPerPass
+      === FORMULA_V1.defaultPriorities.amortizedCostPerPass
+    && state.priorities.amortizedAgentTimePerPass
+      === FORMULA_V1.defaultPriorities.amortizedAgentTimePerPass
+    && state.performanceFloor === DEFAULT_PERFORMANCE_FLOOR
+    && state.sortBy === DEFAULT_SORT_BY
+    && !state.paretoOnly
+    && modelInputs.every((input) => input.checked)
+  );
 }
 
 function setAllModels(selected) {
@@ -1254,6 +1271,25 @@ function render() {
   renderChart(floorEligible, seriesMap, modelColors);
   const tableCount = renderTable(floorEligible, modelColors);
   elements.visibleCount.textContent = `Chart ${floorEligible.filter(isFiniteChartConfiguration).length} · table ${tableCount} · ${paretoCount} Pareto-efficient`;
+  updateResetControlsButton();
+}
+
+function resetControls() {
+  state.priorities = { ...FORMULA_V1.defaultPriorities };
+  state.performanceFloor = DEFAULT_PERFORMANCE_FLOOR;
+  state.sortBy = DEFAULT_SORT_BY;
+  state.paretoOnly = false;
+  elements.costPriority.value = String(
+    FORMULA_V1.defaultPriorities.amortizedCostPerPass,
+  );
+  elements.performanceFloor.value = String(DEFAULT_PERFORMANCE_FLOOR * 100);
+  elements.performanceFloorValue.textContent = `≥${
+    elements.performanceFloor.value
+  }%`;
+  elements.sortBy.value = DEFAULT_SORT_BY;
+  elements.paretoOnly.checked = false;
+  renderPriorityOutputs();
+  setAllModels(true);
 }
 
 function validateFormulaSelector() {
@@ -1284,6 +1320,7 @@ elements.paretoOnly.addEventListener("change", () => {
 });
 elements.selectAllModels.addEventListener("click", () => setAllModels(true));
 elements.clearModels.addEventListener("click", () => setAllModels(false));
+elements.resetControls.addEventListener("click", resetControls);
 elements.retryButton.addEventListener("click", loadFeed);
 let resizeFrame = null;
 window.addEventListener("resize", () => {
