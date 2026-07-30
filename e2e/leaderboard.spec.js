@@ -100,6 +100,12 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".priority-ticks i")).toHaveCount(21);
   await expect(page.locator(".priority-ticks i.major")).toHaveCount(11);
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
+  if (test.info().project.name !== "mobile-320") {
+    const sliderTops = await page.locator(".priority-grid input[type='range']").evaluateAll(
+      (sliders) => sliders.map((slider) => slider.getBoundingClientRect().top),
+    );
+    expect(Math.max(...sliderTops) - Math.min(...sliderTops)).toBeLessThan(1);
+  }
   await expect(page.getByText("Time–cost priority", { exact: true })).toBeVisible();
   await expect(page.locator(".priority-scale span").first()).toHaveText("Time");
   await expect(page.locator(".priority-scale span").last()).toHaveText("Cost");
@@ -540,6 +546,12 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
   expect(await tableWrap.evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
+  const wideControlLefts = await page.locator(".filter-row > *").evaluateAll(
+    (controls) => controls.map((control) => control.getBoundingClientRect().left),
+  );
+  expect(Math.max(...wideControlLefts) - Math.min(...wideControlLefts))
+    .toBeLessThan(1);
+  await expect(page.locator(".select-control")).toHaveCSS("flex-direction", "row");
   await expect(tableWrap).toHaveAttribute("role", "region");
   await expect(tableWrap).toHaveAttribute("aria-labelledby", "table-heading");
   await expect(tableWrap).toHaveAttribute("tabindex", "0");
@@ -547,6 +559,32 @@ test("wide tables fit without supplemental row details", async ({ page }) => {
     await expect(page.locator("#leaderboard-body tr").first().locator("td").nth(columnIndex))
       .toHaveCSS("white-space", "nowrap");
   }
+  const desktopBars = page.locator("#leaderboard-body .relative-value-bar");
+  await expect(desktopBars.first()).toBeVisible();
+  await expect(desktopBars.first()).toHaveCSS("height", "3px");
+  await expect(desktopBars.first().locator(".relative-value-bar-fill"))
+    .toHaveAttribute("style", "width: 100%;");
+  const secondRowValue = Number.parseFloat(
+    await page.locator("#leaderboard-body tr").nth(1).locator(".value-cell").innerText(),
+  );
+  const secondBarRatio = await desktopBars.nth(1).evaluate((bar) => (
+    bar.firstElementChild.getBoundingClientRect().width
+      / bar.getBoundingClientRect().width
+  ));
+  expect(secondBarRatio).toBeCloseTo(secondRowValue, 2);
+
+  await page.setViewportSize({ width: 801, height: 800 });
+  await expect(page.locator(".select-control")).toHaveCSS("flex-direction", "row");
+  expect(await page.locator("thead th:last-child .wide-column-label").evaluate(
+    (label) => label.getClientRects().length,
+  )).toBe(1);
+  expect(await tableWrap.evaluate(
+    (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
+  )).toBe(true);
+  await page.setViewportSize({ width: 799, height: 800 });
+  await expect(page.locator(".select-control")).toHaveCSS("flex-direction", "column");
+  await expect(page.locator("#leaderboard-body tr").first())
+    .toHaveCSS("display", "grid");
 });
 
 test("stacked table scrolls only when its metrics no longer fit", async ({ page }) => {
@@ -567,6 +605,13 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   expect(await page.locator(".chart-wrap").evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
+  const filterLeft = await page.locator(".filter-row").evaluate(
+    (element) => element.getBoundingClientRect().left,
+  );
+  const paretoLeft = await page.locator(".switch-control").evaluate(
+    (element) => element.getBoundingClientRect().left,
+  );
+  expect(Math.abs(paretoLeft - filterLeft)).toBeLessThan(1);
   await expect(page.locator(".nav-content")).toHaveCSS("overflow-x", "auto");
   await expect(page.locator(".nav-content")).toHaveCSS("white-space", "nowrap");
   expect(await page.locator("body").evaluate((body) => (
@@ -641,7 +686,7 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   await expect(page.locator("#leaderboard-body tr").first())
     .not.toHaveAttribute("tabindex", "0");
 
-  await page.setViewportSize({ width: 361, height: 874 });
+  await page.setViewportSize({ width: 320, height: 874 });
   await expect(page.locator("#leaderboard-body .performance-ci").first())
     .toHaveCSS("display", "inline");
   expect(await page.locator(".table-wrap").evaluate(
@@ -696,7 +741,6 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
     positionsAfterScroll.value - positionsBeforeScroll.value,
   )).toBeLessThan(1);
   expect(positionsAfterScroll.cost).toBeLessThan(positionsBeforeScroll.cost);
-  await page.setViewportSize({ width: 320, height: 874 });
   expect(await page.locator("body").evaluate((body) => (
     body.scrollWidth <= document.documentElement.clientWidth
   ))).toBe(true);

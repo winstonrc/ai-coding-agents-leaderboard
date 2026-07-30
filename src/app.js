@@ -761,7 +761,7 @@ function niceStep(maximum, targetIntervals = 6) {
 function renderChart(configurations, groupIdentifiers) {
   clearChart();
   const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
-  const compact = renderedWidth < 720;
+  const compact = renderedWidth < 800;
   const chartWidth = compact ? Math.max(280, Math.round(renderedWidth)) : 960;
   const chartHeight = compact ? 500 : 600;
   elements.chart.setAttribute("viewBox", `0 0 ${chartWidth} ${chartHeight}`);
