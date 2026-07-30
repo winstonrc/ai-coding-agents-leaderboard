@@ -2,6 +2,21 @@
 
 :root {
   color-scheme: light;
+  --mark-l-dir: 1;
+  --family-openai: oklch(58% 0.13 155);
+  --family-anthropic: oklch(62% 0.15 50);
+  --family-google: oklch(58% 0.17 255);
+  --family-xai: oklch(56% 0.08 265);
+  --family-meta: oklch(61% 0.2 255);
+  --family-alibaba: oklch(60% 0.15 220);
+  --family-mistral: oklch(62% 0.16 75);
+  --family-deepseek: oklch(55% 0.18 295);
+  --family-zhipu: oklch(62% 0.12 195);
+  --family-moonshot: oklch(60% 0.18 20);
+  --family-minimax: oklch(62% 0.17 330);
+  --family-xiaomi: oklch(65% 0.13 95);
+  --family-cursor: oklch(56% 0.03 250);
+  --family-other: oklch(55% 0.02 270);
   font-family: system-ui, sans-serif;
   line-height: 1.5;
 }
@@ -411,46 +426,6 @@ input[type="range"] {
   vector-effect: non-scaling-stroke;
 }
 
-.chart-series-0 {
-  color: #b45309;
-}
-
-.chart-series-1 {
-  color: #047857;
-}
-
-.chart-series-2 {
-  color: #1d4ed8;
-}
-
-.chart-series-3 {
-  color: #be123c;
-}
-
-.chart-series-4 {
-  color: #6d28d9;
-}
-
-.chart-series-5 {
-  color: #92400e;
-}
-
-.chart-series-6 {
-  color: #0f766e;
-}
-
-.chart-series-7 {
-  color: #854d0e;
-}
-
-.chart-series-8 {
-  color: #4b5563;
-}
-
-.chart-series-9 {
-  color: #9d174d;
-}
-
 .chart-crosshair-line {
   stroke: #d64550;
   stroke-width: 1;
@@ -543,7 +518,7 @@ td.numeric {
 .relative-value-bar-fill {
   display: block;
   height: 100%;
-  background: currentColor;
+  background: var(--series-color, currentColor);
 }
 
 .compact-column-label {

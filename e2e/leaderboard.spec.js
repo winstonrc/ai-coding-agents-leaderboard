@@ -484,11 +484,20 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     persistentLabelPosition.y,
   );
   if (test.info().project.name === "desktop") {
-    await expect(pointLabel.locator("text")).toHaveCSS("fill", "rgb(180, 83, 9)");
-    await expect(pointLabel.locator("line")).toHaveCSS(
-      "stroke",
-      "rgb(180, 83, 9)",
-    );
+    const colors = await pointLabel.evaluate((label) => {
+      const text = label.querySelector("text");
+      const connector = label.querySelector("line");
+      const point = document.querySelector(
+        `.chart-point-group[data-config="${label.dataset.config}"] .chart-point`,
+      );
+      return {
+        connector: getComputedStyle(connector).stroke,
+        label: text.style.color,
+        point: getComputedStyle(point).fill,
+      };
+    });
+    expect(colors.label).toBe("var(--family-other)");
+    expect(colors.connector).toBe(colors.point);
   }
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-crosshair-cost")).toContainText("$");
@@ -678,12 +687,13 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   const valueBar = page.locator("#leaderboard-body .relative-value-bar-fill").first();
   await expect(valueBar).toHaveCSS("width", /.+/);
   await expect(valueBar).toHaveAttribute("style", "width: 100%;");
-  const barSeriesClass = await valueBar.getAttribute("class");
-  const pointSeriesClass = await page.locator(
+  const barColor = await valueBar.evaluate(
+    (bar) => getComputedStyle(bar).backgroundColor,
+  );
+  const pointColor = await page.locator(
     '.chart-point-group[data-config="agent-alpha-high"] .chart-point',
-  ).getAttribute("class");
-  const barSeries = barSeriesClass.match(/chart-series-\d+/)[0];
-  expect(pointSeriesClass).toContain(barSeries);
+  ).evaluate((point) => getComputedStyle(point).fill);
+  expect(pointColor).toBe(barColor);
   for (const selector of [
     ".cost-cell",
     ".time-cell",

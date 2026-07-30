@@ -12,6 +12,10 @@ import {
   readBoundedResponseText,
 } from "./data/validate-feed.js";
 import {
+  createModelColorMap,
+  modelFamilyColor,
+} from "./model-colors.js";
+import {
   FORMULA_V1,
   normalizePriorities,
   rankConfigurations,
@@ -27,7 +31,6 @@ import {
 const SVG_NAMESPACE = "http://www.w3.org/2000/svg";
 const FETCH_TIMEOUT_MS = 10_000;
 const PUBLISHED_FEED_METADATA_URL = "./data/feed-metadata.json";
-const CHART_SERIES_COUNT = 10;
 const LABEL_CONNECTOR_POINT_CLEARANCE = 9;
 const EFFORT_ORDER = new Map([
   ["low", 0],
@@ -386,7 +389,7 @@ function compareConfigurations(left, right) {
   return left.config.localeCompare(right.config);
 }
 
-function renderTable(configurations, seriesMap) {
+function renderTable(configurations, modelColors) {
   const tableConfigurations = configurations
     .filter((configuration) => !state.paretoOnly || configuration.paretoEfficient)
     .sort(compareConfigurations);
@@ -411,11 +414,13 @@ function renderTable(configurations, seriesMap) {
     appendText(nameCell, "strong", displayName, "configuration-name");
     const valueBar = appendText(nameCell, "span", "", "relative-value-bar");
     valueBar.setAttribute("aria-hidden", "true");
-    const seriesId = seriesMap.get(configurationGroupKey(configuration));
-    const barClass = Number.isFinite(Number(seriesId))
-      ? `relative-value-bar-fill chart-series-${Number(seriesId) % CHART_SERIES_COUNT}`
-      : "relative-value-bar-fill";
-    const valueBarFill = appendText(valueBar, "span", "", barClass);
+    const valueBarFill = appendText(
+      valueBar,
+      "span",
+      "",
+      "relative-value-bar-fill",
+    );
+    row.style.setProperty("--series-color", modelColors.get(configuration.model));
     const relativeValue = Number.isFinite(configuration.relativeValue)
       ? Math.max(0, Math.min(1, configuration.relativeValue))
       : 0;
@@ -782,7 +787,7 @@ function niceStep(maximum, targetIntervals = 6) {
   return factor * magnitude;
 }
 
-function renderChart(configurations, groupIdentifiers) {
+function renderChart(configurations, groupIdentifiers, modelColors) {
   clearChart();
   const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
   const compact = renderedWidth < 900;
@@ -994,12 +999,13 @@ function renderChart(configurations, groupIdentifiers) {
           }`;
         })
         .join(" ");
-      const seriesIndex = Number(groupIdentifiers.get(key)) % CHART_SERIES_COUNT;
-      elements.chart.append(createSvgElement("path", {
+      const seriesPath = createSvgElement("path", {
         d: path,
-        class: `chart-link chart-series chart-series-${seriesIndex}`,
+        class: "chart-link chart-series",
         "data-chart-group": groupIdentifiers.get(key),
-      }));
+      });
+      seriesPath.style.color = modelColors.get(sorted[0].model);
+      elements.chart.append(seriesPath);
       const hitTarget = createSvgElement("path", {
         d: path,
         class: "chart-link-hit-target",
@@ -1014,7 +1020,6 @@ function renderChart(configurations, groupIdentifiers) {
   for (const configuration of finite) {
     const key = configurationGroupKey(configuration);
     const groupId = groupIdentifiers.get(key);
-    const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
     const xPosition = x(configuration.amortizedCostPerPassUsd);
     const yPosition = y(configuration.amortizedAgentTimePerPassMinutes);
     const visibleMarker = configuration.paretoEfficient
@@ -1034,8 +1039,8 @@ function renderChart(configurations, groupIdentifiers) {
     visibleMarker.setAttribute(
       "class",
       configuration.paretoEfficient
-        ? `chart-point chart-point-pareto chart-series chart-series-${seriesIndex}`
-        : `chart-point chart-series chart-series-${seriesIndex}`,
+        ? "chart-point chart-point-pareto chart-series"
+        : "chart-point chart-series",
     );
     visibleMarker.dataset.chartGroup = groupId;
     visibleMarker.setAttribute("aria-hidden", "true");
@@ -1051,6 +1056,7 @@ function renderChart(configurations, groupIdentifiers) {
       role: "img",
       "aria-label": markerDetails(configuration),
     });
+    markerGroup.style.color = modelColors.get(configuration.model);
     markerGroup.append(
       createSvgElement("circle", {
         cx: xPosition,
@@ -1140,21 +1146,22 @@ function renderChart(configurations, groupIdentifiers) {
   for (const configuration of labelConfigurations) {
     const key = configurationGroupKey(configuration);
     const groupId = groupIdentifiers.get(key);
-    const seriesIndex = Number(groupId) % CHART_SERIES_COUNT;
     const point = pointsByConfig.get(configuration.config);
     const defaultVisible = representativeConfigs.has(configuration.config);
     const pointLabel = createSvgElement("g", {
-      class: `chart-point-label chart-series chart-series-${seriesIndex}`,
+      class: "chart-point-label chart-series",
       "data-chart-group": groupId,
       "data-config": configuration.config,
       "data-default-visible": defaultVisible,
       "aria-hidden": "true",
     });
+    pointLabel.style.color = modelColors.get(configuration.model);
     const label = createSvgElement("text", {
       x: 0,
       y: 0,
       class: "chart-label",
     });
+    label.style.color = modelFamilyColor(configuration.model);
     const modelName = createSvgElement("tspan", { x: 0 });
     modelName.textContent = configuration.model;
     const effort = createSvgElement("tspan", {
@@ -1243,8 +1250,9 @@ function render() {
   const seriesMap = createSeriesMap(
     floorEligible.filter(isFiniteChartConfiguration),
   );
-  renderChart(floorEligible, seriesMap);
-  const tableCount = renderTable(floorEligible, seriesMap);
+  const modelColors = createModelColorMap(state.feed.configurations);
+  renderChart(floorEligible, seriesMap, modelColors);
+  const tableCount = renderTable(floorEligible, modelColors);
   elements.visibleCount.textContent = `Chart ${floorEligible.filter(isFiniteChartConfiguration).length} · table ${tableCount} · ${paretoCount} Pareto-efficient`;
 }
 
