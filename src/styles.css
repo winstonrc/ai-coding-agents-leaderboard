@@ -438,6 +438,10 @@ input[type="range"] {
   fill: #d64550;
   font-size: 13px;
   font-weight: normal;
+  paint-order: stroke;
+  stroke: Canvas;
+  stroke-linejoin: round;
+  stroke-width: 4px;
 }
 
 .chart-detail {

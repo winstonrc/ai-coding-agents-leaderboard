@@ -546,6 +546,8 @@ function hideChartDetails() {
   });
 }
 
+let resetChartInteraction = hideChartDetails;
+
 function isFiniteChartConfiguration(configuration) {
   return Number.isFinite(configuration.amortizedCostPerPassUsd)
     && Number.isFinite(configuration.amortizedAgentTimePerPassMinutes)
@@ -871,6 +873,11 @@ function renderChart(configurations) {
     armSeries(groupId);
     showChartDetails(configuration, marker, groupId);
   };
+  resetChartInteraction = () => {
+    cancelPointerExit();
+    armSeries(null);
+    hideChartDetails();
+  };
   for (const [key, group] of sortedGroups) {
     const sorted = group.sort((left, right) => {
       const leftOrder = EFFORT_ORDER.get(left.reasoningEffort) ?? 6;
@@ -1176,6 +1183,14 @@ elements.paretoOnly.addEventListener("change", () => {
 elements.selectAllModels.addEventListener("click", () => setAllModels(true));
 elements.clearModels.addEventListener("click", () => setAllModels(false));
 elements.retryButton.addEventListener("click", loadFeed);
+document.addEventListener("pointerdown", (event) => {
+  if (!elements.chart.classList.contains("is-interacting")) return;
+  if (event.target instanceof Element && event.target.closest(".chart-point-group")) {
+    return;
+  }
+  elements.chart.querySelector(".chart-point-group:focus")?.blur();
+  resetChartInteraction();
+});
 
 renderPriorityOutputs();
 if (validateFormulaSelector()) {

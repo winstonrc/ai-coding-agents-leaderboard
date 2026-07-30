@@ -416,6 +416,14 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-crosshair")).toHaveAttribute("visibility", "visible");
   await expect(page.locator(".chart-crosshair-cost")).toContainText("$");
   await expect(page.locator(".chart-crosshair-time")).toContainText("min");
+  await expect(page.locator(".chart-crosshair-cost")).toHaveCSS(
+    "paint-order",
+    "stroke",
+  );
+  await expect(page.locator(".chart-crosshair-cost")).toHaveCSS(
+    "stroke-width",
+    "4px",
+  );
   await expect(page.locator(".chart-series.is-muted")).not.toHaveCount(0);
   await expect(page.locator(".chart-point-group").first().locator(".chart-point"))
     .not.toHaveClass(/is-muted/);
@@ -437,6 +445,13 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(page.locator(".chart-point-group").first()).toHaveAttribute("role", "img");
   await expect(page.locator(".chart-point-group").first().locator(".chart-hit-target"))
     .toHaveAttribute("r", "16");
+  await page.locator("#chart-heading").dispatchEvent("pointerdown", {
+    bubbles: true,
+    pointerType: "touch",
+  });
+  await expect(page.locator("#chart-detail")).toBeEmpty();
+  await expect(page.locator("#value-chart")).not.toHaveClass(/is-interacting/);
+  await expect(page.locator(".chart-link-hit-target.is-armed")).toHaveCount(0);
 
   expect(await page.locator("body").evaluate((body) => (
     body.scrollWidth <= document.documentElement.clientWidth
