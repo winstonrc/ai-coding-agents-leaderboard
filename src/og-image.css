@@ -10,48 +10,124 @@ body {
 }
 
 .site-nav,
-.site-header,
 #status-panel,
 .controls,
-.table-section,
 .provenance,
-.chart-section > .section-heading,
-.chart-intro,
-.chart-detail {
+.chart-section {
   display: none !important;
 }
 
+.site-header {
+  padding: 54px 0 34px;
+}
+
+.site-header .page-width,
 main.page-width {
-  display: flex;
-  width: 1200px;
-  height: 630px;
+  width: 1080px;
   max-width: none;
-  align-items: center;
-  padding: 0 12px;
+  padding: 0;
 }
 
-#leaderboard {
-  width: 100%;
+.site-header h1 {
+  margin-bottom: 8px;
+  font-size: 48px;
+  line-height: 1.2;
 }
 
-.chart-section {
-  width: 100%;
+.site-header .intro {
+  display: none;
+}
+
+.og-updated {
   margin: 0;
+  color: GrayText;
+  font-size: 17px;
 }
 
-.chart-frame {
+main.page-width {
+  display: block;
+  height: auto;
+  padding-block: 0;
+}
+
+#leaderboard,
+.table-section {
+  width: 100%;
+}
+
+.table-section {
   margin-top: 0;
 }
 
-.chart-legend {
-  width: 960px;
-  justify-content: flex-start;
-  padding: 0 0 0 92px;
-  margin: 8px auto 0;
+.table-section .section-heading {
+  display: none;
 }
 
-.value-chart {
-  width: 100%;
-  height: 600px;
-  min-height: 0;
+.table-wrap {
+  overflow: hidden;
+}
+
+.table-section table {
+  table-layout: fixed;
+}
+
+.table-section th:first-child,
+.table-section .configuration-cell {
+  width: 43%;
+}
+
+.table-section th,
+.table-section td {
+  padding: 20px 14px;
+}
+
+.table-section th {
+  font-size: 20px;
+}
+
+.table-section td {
+  vertical-align: middle;
+  font-size: 26px;
+}
+
+.table-section th:last-child,
+.table-section td:last-child {
+  display: none;
+}
+
+.table-section tbody tr:nth-child(n + 4) {
+  display: none;
+}
+
+.configuration-name {
+  font-size: 30px;
+}
+
+.relative-value-bar {
+  height: 7px;
+  margin-top: 12px;
+}
+
+.value-cell {
+  font-size: 32px !important;
+}
+
+.performance-ci {
+  display: none;
+}
+
+.compact-column-label {
+  display: none;
+}
+
+.wide-column-label {
+  display: inline;
+}
+
+.table-section tbody tr:nth-child(3) td {
+  border-bottom: 0;
+}
+
+.table-section .empty-state {
+  display: none !important;
 }

@@ -1,11 +1,25 @@
 // SPDX-License-Identifier: MPL-2.0
 
 import { spawn } from "node:child_process";
+import { readFile } from "node:fs/promises";
 import { fileURLToPath } from "node:url";
 import path from "node:path";
 import { chromium } from "@playwright/test";
 
 const root = path.resolve(path.dirname(fileURLToPath(import.meta.url)), "..");
+const feed = JSON.parse(await readFile(
+  path.join(root, "src", "data", "leaderboard-v1.1.json"),
+  "utf8",
+));
+const generatedAtUtc = `${new Intl.DateTimeFormat("en-US", {
+  day: "numeric",
+  hour: "2-digit",
+  hourCycle: "h23",
+  minute: "2-digit",
+  month: "short",
+  timeZone: "UTC",
+  year: "numeric",
+}).format(new Date(feed.generated_at))} UTC`;
 const port = Number(process.env.PORT ?? 4174);
 const server = spawn(process.execPath, ["scripts/serve.mjs"], {
   cwd: root,
@@ -36,7 +50,13 @@ try {
     viewport: { width: 1200, height: 630 },
   });
   await page.goto(`http://127.0.0.1:${port}/?formula=v1`);
-  await page.locator(".chart-point").first().waitFor();
+  await page.locator("#leaderboard-body tr").first().waitFor();
+  await page.evaluate((generatedAt) => {
+    const updated = document.createElement("p");
+    updated.className = "og-updated";
+    updated.textContent = `Default ranking · Data generated ${generatedAt}`;
+    document.querySelector(".site-header .page-width").append(updated);
+  }, generatedAtUtc);
   await page.evaluate(() => new Promise((resolve, reject) => {
     const stylesheet = document.createElement("link");
     stylesheet.rel = "stylesheet";

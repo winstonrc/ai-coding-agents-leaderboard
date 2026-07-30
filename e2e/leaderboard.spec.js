@@ -245,7 +245,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   );
   await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
     "content",
-    "AI coding agents amortized agent time and cost per pass chart",
+    "Top three AI coding agents ranked by time and cost per successful task",
   );
   await expect(page.locator(".chart-point-group")).toHaveCount(3);
   expect(await page.locator(".chart-section").evaluate((chart) => (
