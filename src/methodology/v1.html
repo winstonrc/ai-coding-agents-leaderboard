@@ -43,20 +43,20 @@
         <h2>Definition</h2>
         <div class="formula" aria-label="Formula v1">
           Score<sub>v1</sub> = 100
-          (10 / (c / p))<sup>w<sub>c</sub></sup>
           (40 / (m / p))<sup>w<sub>t</sub></sup>
+          (10 / (c / p))<sup>w<sub>c</sub></sup>
         </div>
         <p>
           <var>p</var> is 1-run success (the source Pass@1 point estimate),
-          <var>c</var> is
-          mean cost in dollars per attempt, and <var>m</var> is mean duration in
-          minutes per attempt. The two nonnegative priorities are normalized to
-          sum to one. The defaults are 60% amortized cost per pass and 40%
-          amortized agent time per pass.
+          <var>m</var> is mean duration in
+          minutes per attempt, and <var>c</var> is mean cost in dollars per attempt.
+          The two nonnegative priorities are normalized to
+          sum to one. The defaults are 50% amortized agent time per pass and 50%
+          amortized cost per pass.
         </p>
         <p>
-          The anchors describe an index value of 100: $10 amortized cost per pass
-          and 40 minutes amortized agent time per pass. Anchors affect the displayed
+          The anchors describe an index value of 100: 40 minutes amortized agent time
+          per pass and $10 amortized cost per pass. Anchors affect the displayed
           scale, not ordering.
         </p>
         <p>
@@ -85,20 +85,20 @@
       <section>
         <h2>What the priorities mean</h2>
         <p>
-          Amortized cost per pass is <var>c / p</var>; amortized agent time per pass
-          is <var>m / p</var>. These divide aggregate per-attempt averages by the
+          Amortized agent time per pass is <var>m / p</var>; amortized cost per pass
+          is <var>c / p</var>. These divide aggregate per-attempt averages by the
           aggregate 1-run success rate. Expanding the formula gives:
         </p>
         <div class="formula" aria-label="Expanded behavior">
-          Score<sub>v1</sub> ∝ p · c<sup>−w<sub>c</sub></sup>
-          · m<sup>−w<sub>t</sub></sup>
+          Score<sub>v1</sub> ∝ p · m<sup>−w<sub>t</sub></sup>
+          · c<sup>−w<sub>c</sub></sup>
         </div>
         <p>
           Reliability therefore has an effective elasticity of one: a lower pass rate
-          reduces both aggregate cost and time efficiency. The 60/40 default is an
-          editorial preference that treats percentage improvements in cost as somewhat
-          more important than equal percentage improvements in agent time. It is not
-          an empirically calibrated optimum.
+          reduces both aggregate time and cost efficiency. Formula v1 balances
+          amortized agent time and cost equally by default. This is an editorial
+          starting point, not an empirically calibrated optimum; the control allows
+          either outcome to receive more priority.
         </p>
       </section>
 
@@ -114,7 +114,7 @@
         <p>
           4-run success is a supplemental persistence diagnostic. It does not
           affect Formula v1 or Pareto status, because the aggregate feed does not
-          describe a sequential policy that stops after success or the cost and time
+          describe a sequential policy that stops after success or the time and cost
           consumed before each task first passes. Rows published with a run count other
           than four remain visible but are not compared in the 4-run success sort.
         </p>
@@ -128,8 +128,8 @@
           the severity of a failed result.
         </p>
         <p>
-          Amortized cost and agent time describe aggregate benchmark throughput. They
-          do not estimate the cost, time, or wall-clock latency of retrying a task until
+          Amortized agent time and cost describe aggregate benchmark throughput. They
+          do not estimate the time, cost, or wall-clock latency of retrying a task until
           success. Correlated or deterministic failures are visible only indirectly
           through the repeated-run diagnostic. Upstream exclusions can also produce
           slightly different task coverage between configurations; the leaderboard
@@ -141,12 +141,12 @@
         <h2>Exceptional values</h2>
         <ul>
           <li>
-            Pass@1 of zero receives a score of zero and infinite amortized cost and
-            time per pass. It remains in an unfiltered table but is omitted from the
+            Pass@1 of zero receives a score of zero and infinite amortized time and
+            cost per pass. It remains in an unfiltered table but is omitted from the
             finite plot.
           </li>
           <li>
-            Nonpositive or nonfinite mean cost or duration is unpriced and excluded
+            Nonpositive or nonfinite mean duration or cost is unpriced and excluded
             from scoring and Pareto calculations.
           </li>
           <li>
@@ -160,8 +160,8 @@
         <h2>Pareto frontier</h2>
         <p>
           A configuration is point-estimate Pareto-efficient when no other rankable
-          configuration has at most as much amortized cost per pass and at most as
-          much amortized agent time per pass—with at least one strict
+          configuration has at most as much amortized agent time per pass and at most
+          as much amortized cost per pass—with at least one strict
           improvement. This is not statistical dominance.
         </p>
         <p>

@@ -350,8 +350,8 @@ function readPriorities() {
 function renderPriorityOutputs() {
   const normalized = normalizePriorities(state.priorities);
   elements.costPriorityValue.textContent = `${
-    formatPercent(normalized.amortizedCostPerPass, 0)
-  } cost · ${formatPercent(normalized.amortizedAgentTimePerPass, 0)} time`;
+    formatPercent(normalized.amortizedAgentTimePerPass, 0)
+  } time · ${formatPercent(normalized.amortizedCostPerPass, 0)} cost`;
   elements.costPriority.setAttribute(
     "aria-valuetext",
     elements.costPriorityValue.textContent,
@@ -458,14 +458,6 @@ function renderTable(configurations, seriesMap) {
     );
     row.append(valueCell);
 
-    const costCell = appendText(
-      row,
-      "td",
-      formatCurrency(configuration.amortizedCostPerPassUsd),
-      "numeric cost-cell",
-    );
-    costCell.dataset.label = "Cost/pass";
-    costCell.setAttribute("role", "cell");
     const timeCell = appendText(
       row,
       "td",
@@ -474,6 +466,14 @@ function renderTable(configurations, seriesMap) {
     );
     timeCell.dataset.label = "Time/pass";
     timeCell.setAttribute("role", "cell");
+    const costCell = appendText(
+      row,
+      "td",
+      formatCurrency(configuration.amortizedCostPerPassUsd),
+      "numeric cost-cell",
+    );
+    costCell.dataset.label = "Cost/pass";
+    costCell.setAttribute("role", "cell");
     const performanceCell = document.createElement("td");
     performanceCell.className = "numeric performance-cell";
     performanceCell.dataset.label = "1-run success";

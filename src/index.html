@@ -10,13 +10,13 @@
     >
     <meta
       name="description"
-      content="Compare coding agents by the cost and time required to successfully complete software engineering tasks."
+      content="Compare coding agents by the time and cost required to successfully complete software engineering tasks."
     >
     <meta property="og:type" content="website">
     <meta property="og:title" content="AI Coding Agents Leaderboard">
     <meta
       property="og:description"
-      content="Compare coding agents by the cost and time required to successfully complete software engineering tasks."
+      content="Compare coding agents by the time and cost required to successfully complete software engineering tasks."
     >
     <meta property="og:url" content="https://winstonrc.github.io/ai-coding-agents-leaderboard/">
     <meta
@@ -25,7 +25,7 @@
     >
     <meta property="og:image:width" content="1200">
     <meta property="og:image:height" content="630">
-    <meta property="og:image:alt" content="AI coding agents amortized cost and agent time per pass chart">
+    <meta property="og:image:alt" content="AI coding agents amortized agent time and cost per pass chart">
     <meta name="twitter:card" content="summary_large_image">
     <meta
       name="twitter:image"
@@ -53,7 +53,7 @@
       <div class="page-width">
         <h1>AI Coding Agents Leaderboard</h1>
         <p class="intro">
-          Compare coding agents by the cost and time required to successfully complete
+          Compare coding agents by the time and cost required to successfully complete
           software engineering tasks.
         </p>
       </div>
@@ -81,11 +81,11 @@
         <section class="chart-section" aria-labelledby="chart-heading">
           <div class="section-heading">
             <div>
-              <h2 id="chart-heading">Amortized cost and agent time per pass</h2>
+              <h2 id="chart-heading">Amortized agent time and cost per pass</h2>
             </div>
           </div>
           <p class="chart-intro">
-            The table applies the selected cost/time weighting; the chart shows the
+            The table applies the selected time/cost weighting; the chart shows the
             underlying trade-off. 4-run success is supplemental and does not
             affect value or Pareto status. The bottom-left is more efficient.
           </p>
@@ -104,12 +104,12 @@
                 class="value-chart"
                 viewBox="0 0 960 430"
                 role="group"
-                aria-label="Amortized cost and agent time per benchmark pass"
+                aria-label="Amortized agent time and cost per benchmark pass"
                 aria-describedby="chart-description"
               >
                 <desc id="chart-description">
-                  Amortized cost per pass appears horizontally. Amortized agent time per
-                  pass appears vertically. Points closer to the bottom-left are
+                  Amortized agent time per pass appears vertically. Amortized cost per
+                  pass appears horizontally. Points closer to the bottom-left are
                   more efficient. Diamonds are Pareto-efficient among selected models.
                 </desc>
               </svg>
@@ -130,10 +130,28 @@
           <div class="priority-grid">
             <label class="control" for="cost-priority">
               <span>
-                <span>Cost priority</span>
-                <output id="cost-priority-value">60% cost · 40% time</output>
+                <span>Time–cost priority</span>
+                <output id="cost-priority-value">50% time · 50% cost</output>
               </span>
-              <input id="cost-priority" type="range" min="0" max="100" step="1" value="60">
+              <input
+                id="cost-priority"
+                type="range"
+                min="0"
+                max="100"
+                step="5"
+                value="50"
+              >
+              <span class="priority-ticks" aria-hidden="true">
+                <i class="major"></i><i></i><i class="major"></i><i></i><i class="major"></i>
+                <i></i><i class="major"></i><i></i><i class="major"></i><i></i>
+                <i class="major"></i><i></i><i class="major"></i><i></i><i class="major"></i>
+                <i></i><i class="major"></i><i></i><i class="major"></i><i></i>
+                <i class="major"></i>
+              </span>
+              <span class="priority-scale" aria-hidden="true">
+                <span>Time</span>
+                <span>Cost</span>
+              </span>
             </label>
             <label class="control" for="performance-floor">
               <span>
@@ -159,8 +177,8 @@
                 <option value="value">Relative value</option>
                 <option value="performance">1-run success</option>
                 <option value="persistence">4-run success</option>
-                <option value="cost">Lowest amortized cost per pass</option>
                 <option value="speed">Fastest amortized agent time per pass</option>
+                <option value="cost">Lowest amortized cost per pass</option>
               </select>
             </label>
             <label class="switch-control" for="pareto-only">
@@ -190,16 +208,16 @@
                     scope="col"
                     role="columnheader"
                     class="numeric"
-                    aria-label="Amortized cost per benchmark pass"
-                    title="Mean cost per scored attempt divided by 1-run success (Pass@1)."
-                  ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost/<br>Pass</span></th>
+                    aria-label="Amortized agent time per benchmark pass"
+                    title="Mean agent time per scored attempt divided by 1-run success (Pass@1)."
+                  ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time/<br>Pass</span></th>
                   <th
                     scope="col"
                     role="columnheader"
                     class="numeric"
-                    aria-label="Amortized agent time per benchmark pass"
-                    title="Mean agent time per scored attempt divided by 1-run success (Pass@1)."
-                  ><span class="wide-column-label">Time/pass</span><span class="compact-column-label">Time/<br>Pass</span></th>
+                    aria-label="Amortized cost per benchmark pass"
+                    title="Mean cost per scored attempt divided by 1-run success (Pass@1)."
+                  ><span class="wide-column-label">Cost/pass</span><span class="compact-column-label">Cost/<br>Pass</span></th>
                   <th
                     scope="col"
                     role="columnheader"
@@ -247,7 +265,7 @@
             </div>
           </dl>
           <p>
-            Amortized cost and time divide aggregate attempt averages by the
+            Amortized time and cost divide aggregate attempt averages by the
             1-run success rate (Pass@1); they do not model stopping after a successful retry.
             Coverage may vary because the source excludes some errors.
           </p>

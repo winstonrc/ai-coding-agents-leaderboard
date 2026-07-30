@@ -91,17 +91,31 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await page.goto("/?formula=v1");
 
   await expect(page.locator("#status-title")).toHaveText("4 configurations validated");
-  await expect(page.locator("#cost-priority-value")).toHaveText("60% cost · 40% time");
+  await expect(page.locator("#cost-priority-value")).toHaveText("50% time · 50% cost");
   await expect(page.locator("#cost-priority")).toHaveAttribute(
     "aria-valuetext",
-    "60% cost · 40% time",
+    "50% time · 50% cost",
   );
+  await expect(page.locator("#cost-priority")).toHaveAttribute("step", "5");
+  await expect(page.locator(".priority-ticks i")).toHaveCount(21);
+  await expect(page.locator(".priority-ticks i.major")).toHaveCount(11);
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");
-  await expect(page.getByText("Cost priority", { exact: true })).toBeVisible();
+  await expect(page.getByText("Time–cost priority", { exact: true })).toBeVisible();
+  await expect(page.locator(".priority-scale span").first()).toHaveText("Time");
+  await expect(page.locator(".priority-scale span").last()).toHaveText("Cost");
   await expect(page.getByText(
     "Minimum point-estimate 1-run success",
     { exact: true },
   )).toBeVisible();
+  expect(await page.locator("#sort-by option").evaluateAll(
+    (options) => options.map((option) => option.textContent),
+  )).toEqual([
+    "Relative value",
+    "1-run success",
+    "4-run success",
+    "Fastest amortized agent time per pass",
+    "Lowest amortized cost per pass",
+  ]);
   await expect(page.locator(".chart-axis-label").first())
     .toHaveText("Amortized cost per pass");
   await expect(page.locator(".chart-axis-label").last())
@@ -115,8 +129,8 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   )).toEqual([
     "Model",
     "Value",
-    test.info().project.name === "mobile-320" ? "Cost/\nPass" : "Cost/pass",
     test.info().project.name === "mobile-320" ? "Time/\nPass" : "Time/pass",
+    test.info().project.name === "mobile-320" ? "Cost/\nPass" : "Cost/pass",
     test.info().project.name === "mobile-320" ? "1-run\nsuccess" : "1-run success",
     test.info().project.name === "mobile-320" ? "4-run\nsuccess" : "4-run success",
   ]);
@@ -141,8 +155,8 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toEqual([
     null,
     "Relative to the highest-value configuration meeting the success floor; 1.00× is the leader.",
-    "Mean cost per scored attempt divided by 1-run success (Pass@1).",
     "Mean agent time per scored attempt divided by 1-run success (Pass@1).",
+    "Mean cost per scored attempt divided by 1-run success (Pass@1).",
     "1-run success is the source Pass@1 point estimate.",
     "4-run success is the source Pass@4 share of tasks solved at least once across four runs. Rows with a different run count are not directly comparable.",
   ]);
@@ -180,7 +194,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   );
   await expect(page.locator('meta[property="og:image:alt"]')).toHaveAttribute(
     "content",
-    "AI coding agents amortized cost and agent time per pass chart",
+    "AI coding agents amortized agent time and cost per pass chart",
   );
   await expect(page.locator(".chart-point-group")).toHaveCount(3);
   expect(await page.locator(".chart-section").evaluate((chart) => (
@@ -474,9 +488,9 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   ))).toBe(true);
 
   await page.locator("#cost-priority").fill("100");
-  await expect(page.locator("#cost-priority-value")).toHaveText("100% cost · 0% time");
+  await expect(page.locator("#cost-priority-value")).toHaveText("0% time · 100% cost");
   await page.locator("#cost-priority").fill("0");
-  await expect(page.locator("#cost-priority-value")).toHaveText("0% cost · 100% time");
+  await expect(page.locator("#cost-priority-value")).toHaveText("100% time · 0% cost");
 
   if (test.info().project.name === "mobile-320") {
     await expect(page.locator(".nav-content")).toHaveCSS("white-space", "nowrap");
@@ -654,6 +668,8 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   });
   const positionsBeforeScroll = await rowLocator.evaluate((element) => ({
     configuration: element.querySelector(".configuration-cell").getBoundingClientRect().x,
+    model: element.querySelector(".configuration-name").getBoundingClientRect().x,
+    bar: element.querySelector(".relative-value-bar").getBoundingClientRect().x,
     cost: element.querySelector(".cost-cell").getBoundingClientRect().x,
     value: element.querySelector(".value-cell").getBoundingClientRect().x,
   }));
@@ -662,11 +678,19 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   });
   const positionsAfterScroll = await rowLocator.evaluate((element) => ({
     configuration: element.querySelector(".configuration-cell").getBoundingClientRect().x,
+    model: element.querySelector(".configuration-name").getBoundingClientRect().x,
+    bar: element.querySelector(".relative-value-bar").getBoundingClientRect().x,
     cost: element.querySelector(".cost-cell").getBoundingClientRect().x,
     value: element.querySelector(".value-cell").getBoundingClientRect().x,
   }));
   expect(Math.abs(
     positionsAfterScroll.configuration - positionsBeforeScroll.configuration,
+  )).toBeLessThan(1);
+  expect(Math.abs(
+    positionsAfterScroll.model - positionsBeforeScroll.model,
+  )).toBeLessThan(1);
+  expect(Math.abs(
+    positionsAfterScroll.bar - positionsBeforeScroll.bar,
   )).toBeLessThan(1);
   expect(Math.abs(
     positionsAfterScroll.value - positionsBeforeScroll.value,

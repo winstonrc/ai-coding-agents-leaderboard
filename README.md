@@ -4,7 +4,7 @@
 
 A leaderboard for AI coding agents that aims to answer, "Among configurations meeting
 my minimum single-attempt success rate, which model produces benchmark passes with the
-best aggregate cost and agent-time efficiency?"
+best aggregate agent-time and cost efficiency?"
 
 The data source is the pinned v1.1 feed published at https://deepswe.datacurve.ai/.
 The site is independent and unaffiliated.
@@ -15,11 +15,11 @@ Formula v1 weights outcomes:
 
 ```text
 Score_v1 = 100
-  × (10 / amortized_cost_per_pass)^w_cost
   × (40 / amortized_agent_time_per_pass_minutes)^w_time
+  × (10 / amortized_cost_per_pass)^w_cost
 ```
 
-The default priorities are 60% amortized cost per pass and 40% amortized agent time
+The default priorities are 50% amortized agent time per pass and 50% amortized cost
 per pass. Each outcome divides its per-attempt average by Pass@1, so the expanded
 formula gives Pass@1 an effective elasticity of one. These are aggregate benchmark
 economics, not a simulation of sequential retries that stop after success. The default

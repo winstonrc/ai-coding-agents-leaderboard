@@ -4,6 +4,7 @@ import assert from "node:assert/strict";
 import test from "node:test";
 
 import {
+  FORMULA_V1,
   amortizedAgentTimePerPassMinutes,
   amortizedCostPerPassUsd,
   dominates,
@@ -16,6 +17,13 @@ import { configuration } from "./fixtures.js";
 
 test("Formula v1 anchor produces 100", () => {
   assert.equal(scoreV1(configuration()), 100);
+});
+
+test("Formula v1 balances time and cost equally by default", () => {
+  assert.deepEqual(FORMULA_V1.defaultPriorities, {
+    amortizedCostPerPass: 50,
+    amortizedAgentTimePerPass: 50,
+  });
 });
 
 test("single-outcome priorities rank only by the selected outcome", () => {
@@ -56,12 +64,12 @@ test("single-outcome priorities rank only by the selected outcome", () => {
 test("priorities normalize by ratio", () => {
   assert.deepEqual(
     normalizePriorities({
-      amortizedCostPerPass: 60,
-      amortizedAgentTimePerPass: 40,
+      amortizedCostPerPass: 50,
+      amortizedAgentTimePerPass: 50,
     }),
     normalizePriorities({
-      amortizedCostPerPass: 6,
-      amortizedAgentTimePerPass: 4,
+      amortizedCostPerPass: 5,
+      amortizedAgentTimePerPass: 5,
     }),
   );
   assert.throws(
@@ -102,7 +110,7 @@ test("Formula v1 literal regression values remain frozen", () => {
     meanCostUsd: 3.47,
     meanDurationSeconds: 1_080,
   });
-  assert.equal(scoreV1(subject).toFixed(12), "179.211716831106");
+  assert.equal(scoreV1(subject).toFixed(12), "174.613612140258");
   assert.equal(amortizedCostPerPassUsd(subject).toFixed(12), "5.028985507246");
   assert.equal(
     amortizedAgentTimePerPassMinutes(subject).toFixed(12),
@@ -121,7 +129,7 @@ test("success rate improves both expected outcomes without a direct weight", () 
   );
 });
 
-test("improving cost or time monotonically improves the score", () => {
+test("improving time or cost monotonically improves the score", () => {
   const subject = configuration();
   assert.ok(scoreV1(configuration({ meanCostUsd: 4 })) > scoreV1(subject));
   assert.ok(scoreV1(configuration({ meanDurationSeconds: 1_000 })) > scoreV1(subject));
@@ -141,7 +149,7 @@ test("zero-pass and unpriced policies are explicit", () => {
   assert.equal(amortizedCostPerPassUsd(unpriced), null);
 });
 
-test("Pareto uses amortized cost and agent time point estimates", () => {
+test("Pareto uses amortized agent time and cost point estimates", () => {
   const efficient = configuration({ config: "efficient" });
   const dominated = configuration({
     config: "dominated",

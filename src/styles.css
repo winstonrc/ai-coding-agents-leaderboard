@@ -126,6 +126,29 @@ main {
   color: GrayText;
 }
 
+.priority-scale {
+  color: GrayText;
+  font-size: 0.8rem;
+}
+
+.priority-ticks {
+  display: flex;
+  align-items: flex-start;
+  justify-content: space-between;
+  height: 7px;
+  padding: 0 8px;
+}
+
+.priority-ticks i {
+  width: 1px;
+  height: 3px;
+  background: GrayText;
+}
+
+.priority-ticks i.major {
+  height: 6px;
+}
+
 input[type="range"] {
   width: 100%;
 }
@@ -625,6 +648,7 @@ code {
 
 @media (max-width: 720px) {
   .table-wrap {
+    container-type: inline-size;
     overflow-x: visible;
   }
 
@@ -683,7 +707,7 @@ code {
     left: 0;
     z-index: 1;
     box-sizing: border-box;
-    width: min(100%, calc(100vw - 32px));
+    width: 100cqw;
     background: Canvas;
   }
 
@@ -705,11 +729,11 @@ code {
     justify-self: end;
   }
 
-  .cost-cell {
+  .time-cell {
     grid-column: 1;
   }
 
-  .time-cell {
+  .cost-cell {
     grid-column: 2;
   }
 
