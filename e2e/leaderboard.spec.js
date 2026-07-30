@@ -550,11 +550,14 @@ test("stacked table scrolls only when its metrics no longer fit", async ({ page 
   }));
   await page.goto("/?formula=v1");
 
-  for (const selector of [".nav-content", ".chart-wrap"]) {
-    expect(await page.locator(selector).evaluate(
-      (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
-    )).toBe(true);
-  }
+  expect(await page.locator(".chart-wrap").evaluate(
+    (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
+  )).toBe(true);
+  await expect(page.locator(".nav-content")).toHaveCSS("overflow-x", "auto");
+  await expect(page.locator(".nav-content")).toHaveCSS("white-space", "nowrap");
+  expect(await page.locator("body").evaluate((body) => (
+    body.scrollWidth <= document.documentElement.clientWidth
+  ))).toBe(true);
   expect(await page.locator(".table-wrap").evaluate(
     (wrapper) => wrapper.scrollWidth <= wrapper.clientWidth,
   )).toBe(true);
