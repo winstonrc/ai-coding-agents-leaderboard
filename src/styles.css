@@ -536,10 +536,6 @@ td:nth-child(8) {
   font-variant-numeric: tabular-nums;
 }
 
-.methodology {
-  max-width: 850px;
-}
-
 .methodology section + section {
   margin-top: 28px;
   padding-top: 20px;

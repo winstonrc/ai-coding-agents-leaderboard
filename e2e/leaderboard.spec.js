@@ -511,6 +511,20 @@ test("wide tables fit and secondary details hide before overflow", async ({ page
     .toHaveCSS("display", "block");
 });
 
+test("methodology heading aligns with its reading column", async ({ page }) => {
+  await page.goto("/methodology/v1.html");
+
+  const heading = await page.getByRole("heading", {
+    level: 1,
+    name: "Formula v1 methodology",
+  }).boundingBox();
+  const definition = await page.getByRole("heading", {
+    level: 2,
+    name: "Definition",
+  }).boundingBox();
+  expect(Math.abs(heading.x - definition.x)).toBeLessThan(2);
+});
+
 test("each family labels its highest-value effort and interactions keep positions fixed", async ({ page }) => {
   await routeFeed(page, feed({
     rows: [
