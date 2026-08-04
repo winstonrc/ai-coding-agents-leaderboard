@@ -1,11 +1,11 @@
 {
   "scope": "Every DeepSWE rollout across imported Pier jobs, grouped by configuration (harness + model + reasoning effort)",
   "unit": "pass@1 is attempt pass rate over scored rollout attempts. pass@4 is tasks with at least one passing rollout divided by tasks attempted. Context-window failures and agent timeouts are scored failures; provider/verifier/network errors are excluded. Efficiency aggregates are over every scored attempt.",
-  "generated_at": "2026-07-25T03:13:49.273952+00:00",
+  "generated_at": "2026-08-04T01:34:32.908483+00:00",
   "n_tasks_in_set": 113,
   "latest_job": {
-    "name": "20260724-opus-5",
-    "finished_at": "2026-07-25T01:59:45.339374Z"
+    "name": "20260803-qwen-3.8-max",
+    "finished_at": "2026-08-03T17:42:27.603007"
   },
   "rows": [
     {
@@ -700,6 +700,39 @@
       "median_agent_steps": 29.0,
       "median_peak_context_tokens": 46865.0,
       "median_output_tokens_to_pass": 17502.0
+    },
+    {
+      "model": "qwen3-8-max",
+      "harness": "mini-swe-agent",
+      "reasoning_effort": "xhigh",
+      "config": "mini_swe_agent_qwen3_8_max_xhigh",
+      "source": "deep-swe",
+      "pass_rate": 0.5746102449888641,
+      "pass_at_1": 0.5746102449888641,
+      "pass_at_4": 0.831858407079646,
+      "n_passed": 258,
+      "n_attempted": 449,
+      "n_tasks_attempted": 113,
+      "n_tasks_passed_any": 94,
+      "ci_passed": 258,
+      "ci_attempted": 449,
+      "ci_lo": 0.5479823182637887,
+      "ci_hi": 0.6012381717139396,
+      "ci_half": 0.026627926725075454,
+      "n_runs": 4,
+      "ci_method": "95% run-to-run: SE across repeated whole-benchmark passes (1.96 * std(runs)/sqrt(R))",
+      "mean_cost_usd": 3.7290646500445437,
+      "median_cost_usd": 3.132689060000001,
+      "mean_output_tokens": 95075.18262806236,
+      "median_output_tokens": 89729.0,
+      "mean_input_tokens": 12996066.461024499,
+      "median_input_tokens": 10163801.0,
+      "mean_duration_seconds": 2567.2746634654786,
+      "median_duration_seconds": 2424.198128,
+      "mean_agent_steps": 111.33853006681514,
+      "median_agent_steps": 102.0,
+      "median_peak_context_tokens": 160572.0,
+      "median_output_tokens_to_pass": 91083.0
     },
     {
       "model": "gpt-5-6-luna",
