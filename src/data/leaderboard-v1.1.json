@@ -1,11 +1,11 @@
 {
   "scope": "Every DeepSWE rollout across imported Pier jobs, grouped by configuration (harness + model + reasoning effort)",
   "unit": "pass@1 is attempt pass rate over scored rollout attempts. pass@4 is tasks with at least one passing rollout divided by tasks attempted. Context-window failures and agent timeouts are scored failures; provider/verifier/network errors are excluded. Efficiency aggregates are over every scored attempt.",
-  "generated_at": "2026-08-04T01:34:32.908483+00:00",
+  "generated_at": "2026-08-06T05:49:48.534606+00:00",
   "n_tasks_in_set": 113,
   "latest_job": {
-    "name": "20260803-qwen-3.8-max",
-    "finished_at": "2026-08-03T17:42:27.603007"
+    "name": "20260805-deepseek-v4-flash-direct",
+    "finished_at": "2026-08-05T22:40:23.371261"
   },
   "rows": [
     {
@@ -931,6 +931,39 @@
       "median_agent_steps": 56.0,
       "median_peak_context_tokens": 94044.0,
       "median_output_tokens_to_pass": 33872.0
+    },
+    {
+      "model": "deepseek-v4-flash",
+      "harness": "mini-swe-agent",
+      "reasoning_effort": "max",
+      "config": "mini_swe_agent_deepseek_v4_flash_max",
+      "source": "deep-swe",
+      "pass_rate": 0.5331858407079646,
+      "pass_at_1": 0.5331858407079646,
+      "pass_at_4": 0.8053097345132744,
+      "n_passed": 241,
+      "n_attempted": 452,
+      "n_tasks_attempted": 113,
+      "n_tasks_passed_any": 91,
+      "ci_passed": 241,
+      "ci_attempted": 452,
+      "ci_lo": 0.4975163385576403,
+      "ci_hi": 0.5688553428582889,
+      "ci_half": 0.035669502150324287,
+      "n_runs": 4,
+      "ci_method": "95% run-to-run: SE across repeated whole-benchmark passes (1.96 * std(runs)/sqrt(R))",
+      "mean_cost_usd": 0.10023560370265487,
+      "median_cost_usd": 0.09124898719999996,
+      "mean_output_tokens": 107687.02212389381,
+      "median_output_tokens": 104491.5,
+      "mean_input_tokens": 19829931.451327432,
+      "median_input_tokens": 17312559.5,
+      "mean_duration_seconds": 1438.9961937522125,
+      "median_duration_seconds": 1383.7182735000001,
+      "mean_agent_steps": 152.87610619469027,
+      "median_agent_steps": 148.0,
+      "median_peak_context_tokens": 201636.5,
+      "median_output_tokens_to_pass": 100483.0
     },
     {
       "model": "muse-spark-1-1",
