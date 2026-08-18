@@ -18,6 +18,7 @@ concurrency:
 
 jobs:
   build:
+    name: Test and build
     permissions:
       contents: write
     runs-on: ubuntu-latest
@@ -63,6 +64,7 @@ jobs:
           path: dist
 
   deploy:
+    name: Deploy Pages
     environment:
       name: github-pages
       url: ${{ steps.deployment.outputs.page_url }}
