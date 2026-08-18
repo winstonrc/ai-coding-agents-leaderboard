@@ -7,8 +7,8 @@ export const FORMULA_V1 = Object.freeze({
     amortizedAgentTimePerPassMinutes: 40,
   }),
   defaultPriorities: Object.freeze({
-    amortizedCostPerPass: 50,
-    amortizedAgentTimePerPass: 50,
+    amortizedCostPerPass: 40,
+    amortizedAgentTimePerPass: 60,
   }),
 });
 

@@ -136,10 +136,10 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await page.goto("/?formula=v1");
 
   await expect(page.locator("#status-title")).toHaveText("4 configurations validated");
-  await expect(page.locator("#cost-priority-value")).toHaveText("50% Time · 50% Cost");
+  await expect(page.locator("#cost-priority-value")).toHaveText("60% Time · 40% Cost");
   await expect(page.locator("#cost-priority")).toHaveAttribute(
     "aria-valuetext",
-    "50% Time · 50% Cost",
+    "60% Time · 40% Cost",
   );
   await expect(page.locator("#cost-priority")).toHaveAttribute("step", "5");
   await expect(page.locator(".priority-ticks i")).toHaveCount(21);
@@ -237,11 +237,11 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
     .toHaveAttribute("rel", "noreferrer");
   await expect(page.locator('meta[property="og:image"]')).toHaveAttribute(
     "content",
-    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=2",
+    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=3",
   );
   await expect(page.locator('meta[name="twitter:image"]')).toHaveAttribute(
     "content",
-    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=2",
+    "https://winstonrc.github.io/ai-coding-agents-leaderboard/og-image.png?v=3",
   );
   await expect(page.locator('meta[name="twitter:card"]')).toHaveAttribute(
     "content",
@@ -600,9 +600,9 @@ test("reset controls restores every published default", async ({ page }) => {
 
   await resetControls.click();
 
-  await expect(page.locator("#cost-priority")).toHaveValue("50");
+  await expect(page.locator("#cost-priority")).toHaveValue("40");
   await expect(page.locator("#cost-priority-value")).toHaveText(
-    "50% Time · 50% Cost",
+    "60% Time · 40% Cost",
   );
   await expect(page.locator("#performance-floor")).toHaveValue("60");
   await expect(page.locator("#performance-floor-value")).toHaveText("≥60%");

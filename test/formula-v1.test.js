@@ -19,10 +19,10 @@ test("Formula v1 anchor produces 100", () => {
   assert.equal(scoreV1(configuration()), 100);
 });
 
-test("Formula v1 balances time and cost equally by default", () => {
+test("Formula v1 gives time moderately more priority than cost by default", () => {
   assert.deepEqual(FORMULA_V1.defaultPriorities, {
-    amortizedCostPerPass: 50,
-    amortizedAgentTimePerPass: 50,
+    amortizedCostPerPass: 40,
+    amortizedAgentTimePerPass: 60,
   });
 });
 
@@ -110,7 +110,7 @@ test("Formula v1 literal regression values remain frozen", () => {
     meanCostUsd: 3.47,
     meanDurationSeconds: 1_080,
   });
-  assert.equal(scoreV1(subject).toFixed(12), "174.613612140258");
+  assert.equal(scoreV1(subject).toFixed(12), "170.133482809069");
   assert.equal(amortizedCostPerPassUsd(subject).toFixed(12), "5.028985507246");
   assert.equal(
     amortizedAgentTimePerPassMinutes(subject).toFixed(12),

@@ -19,11 +19,13 @@ Score_v1 = 100
   × (10 / amortized_cost_per_pass)^w_cost
 ```
 
-The default priorities are 50% amortized agent time per pass and 50% amortized cost
-per pass. Each outcome divides its per-attempt average by Pass@1, so the expanded
-formula gives Pass@1 an effective elasticity of one. These are aggregate benchmark
-economics, not a simulation of sequential retries that stop after success. The default
-eligibility floor is 60% point-estimate Pass@1.
+The default priorities are 60% amortized agent time per pass and 40% amortized cost
+per pass. This reflects developer-directed, semi-asynchronous work: agent time affects
+feedback latency and throughput without representing continuous developer waiting.
+Each outcome divides its per-attempt average by Pass@1, so the expanded formula gives
+Pass@1 an effective elasticity of one. These are aggregate benchmark economics, not a
+simulation of sequential retries that stop after success. The default eligibility
+floor is 60% point-estimate Pass@1.
 
 The interface calls the source Pass@1 point estimate “1-run success.” The table also
 reports “4-run success,” the source Pass@4 share of tasks solved in at least one of

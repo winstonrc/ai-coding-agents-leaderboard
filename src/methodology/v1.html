@@ -51,7 +51,7 @@
           <var>m</var> is mean duration in
           minutes per attempt, and <var>c</var> is mean cost in dollars per attempt.
           The two nonnegative priorities are normalized to
-          sum to one. The defaults are 50% amortized agent time per pass and 50%
+          sum to one. The defaults are 60% amortized agent time per pass and 40%
           amortized cost per pass.
         </p>
         <p>
@@ -95,8 +95,10 @@
         </div>
         <p>
           Reliability therefore has an effective elasticity of one: a lower pass rate
-          reduces both aggregate time and cost efficiency. Formula v1 balances
-          amortized agent time and cost equally by default. This is an editorial
+          reduces both aggregate time and cost efficiency. Formula v1 gives amortized
+          agent time moderately more priority than cost for developer-directed,
+          semi-asynchronous work. Agent time represents feedback-loop latency and
+          throughput, not continuous developer waiting time. This is an editorial
           starting point, not an empirically calibrated optimum; the control allows
           either outcome to receive more priority.
         </p>
