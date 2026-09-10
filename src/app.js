@@ -33,6 +33,8 @@ const FETCH_TIMEOUT_MS = 10_000;
 const PUBLISHED_FEED_METADATA_URL = "./data/feed-metadata.json";
 const DEFAULT_PERFORMANCE_FLOOR = 0.6;
 const DEFAULT_SORT_BY = "value";
+const CHART_POINT_HIT_RADIUS = 12;
+const CHART_POINTER_EXIT_DELAY_MS = 100;
 const LABEL_CONNECTOR_POINT_CLEARANCE = 9;
 const EFFORT_ORDER = new Map([
   ["low", 0],
@@ -807,6 +809,7 @@ function niceStep(maximum, targetIntervals = 6) {
 }
 
 function renderChart(configurations, groupIdentifiers, modelColors) {
+  resetChartInteraction();
   clearChart();
   const renderedWidth = elements.chart.getBoundingClientRect().width || 960;
   const compact = renderedWidth < 900;
@@ -926,6 +929,9 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
   const sortedGroups = [...groups.entries()].sort(([left], [right]) => (
     left.localeCompare(right)
   ));
+  const groupsById = new Map(sortedGroups.map(([key, group]) => (
+    [groupIdentifiers.get(key), group]
+  )));
   const crosshair = createSvgElement("g", {
     class: "chart-crosshair",
     visibility: "hidden",
@@ -957,12 +963,12 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
   const seriesSegments = [];
   const seriesHitTargets = new Map();
   const markersByConfig = new Map();
-  let pointerExitFrame = null;
+  let pointerExitTimer = null;
   let armedGroupId = null;
   const cancelPointerExit = () => {
-    if (pointerExitFrame === null) return;
-    cancelAnimationFrame(pointerExitFrame);
-    pointerExitFrame = null;
+    if (pointerExitTimer === null) return;
+    clearTimeout(pointerExitTimer);
+    pointerExitTimer = null;
   };
   const armSeries = (groupId) => {
     armedGroupId = groupId;
@@ -971,7 +977,7 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
     });
   };
   const clearPointerInteraction = () => {
-    pointerExitFrame = null;
+    pointerExitTimer = null;
     armSeries(null);
     if (!elements.chart.contains(document.activeElement)) {
       hideChartDetails();
@@ -979,12 +985,59 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
   };
   const schedulePointerExit = () => {
     cancelPointerExit();
-    pointerExitFrame = requestAnimationFrame(clearPointerInteraction);
+    pointerExitTimer = setTimeout(
+      clearPointerInteraction,
+      CHART_POINTER_EXIT_DELAY_MS,
+    );
   };
   const activatePointerPoint = (configuration, marker, groupId) => {
     cancelPointerExit();
     armSeries(groupId);
     showChartDetails(configuration, marker, groupId);
+  };
+  const pointerPosition = (event) => {
+    const matrix = elements.chart.getScreenCTM();
+    if (!matrix) return null;
+    return new DOMPoint(event.clientX, event.clientY)
+      .matrixTransform(matrix.inverse());
+  };
+  const nearestPointerPoint = (event, candidates) => {
+    const cursor = pointerPosition(event);
+    if (!cursor) return null;
+    return candidates.reduce((best, configuration) => {
+      const marker = markersByConfig.get(configuration.config);
+      if (!marker) return best;
+      const distance = Math.hypot(
+        Number(marker.dataset.chartX) - cursor.x,
+        Number(marker.dataset.chartY) - cursor.y,
+      );
+      return best === null || distance < best.distance
+        ? { configuration, distance, marker }
+        : best;
+    }, null);
+  };
+  const activateArmedSeriesAtPointer = (event) => {
+    if (armedGroupId === null) return false;
+    const group = groupsById.get(armedGroupId);
+    const cursor = pointerPosition(event);
+    if (!group || !cursor) return false;
+    const points = group
+      .map((configuration) => markersByConfig.get(configuration.config))
+      .filter(Boolean)
+      .map((marker) => ({
+        x: Number(marker.dataset.chartX),
+        y: Number(marker.dataset.chartY),
+      }));
+    const lineDistance = points.slice(1).reduce((nearest, point, index) => (
+      Math.min(nearest, pointToSegmentDistance(cursor, points[index], point))
+    ), Number.POSITIVE_INFINITY);
+    if (lineDistance > CHART_POINT_HIT_RADIUS) return false;
+    cancelPointerExit();
+    const nearest = nearestPointerPoint(event, group);
+    if (nearest) {
+      showChartDetails(nearest.configuration, nearest.marker, armedGroupId);
+    }
+    return true;
   };
   resetChartInteraction = () => {
     cancelPointerExit();
@@ -1080,16 +1133,31 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
       createSvgElement("circle", {
         cx: xPosition,
         cy: yPosition,
-        r: 16,
+        r: CHART_POINT_HIT_RADIUS,
         class: "chart-hit-target",
         "aria-hidden": "true",
       }),
       visibleMarker,
     );
-    markerGroup.addEventListener(
-      "mouseenter",
-      () => activatePointerPoint(configuration, markerGroup, groupId),
-    );
+    const activateNearestMarker = (event) => {
+      if (armedGroupId !== null && armedGroupId !== groupId) {
+        activateArmedSeriesAtPointer(event);
+        return;
+      }
+      const candidates = armedGroupId === null ? finite : groups.get(key);
+      const nearest = nearestPointerPoint(event, candidates);
+      if (!nearest || nearest.distance > CHART_POINT_HIT_RADIUS) return;
+      const nearestGroupId = groupIdentifiers.get(
+        configurationGroupKey(nearest.configuration),
+      );
+      activatePointerPoint(
+        nearest.configuration,
+        nearest.marker,
+        nearestGroupId,
+      );
+    };
+    markerGroup.addEventListener("mouseenter", activateNearestMarker);
+    markerGroup.addEventListener("mousemove", activateNearestMarker);
     markerGroup.addEventListener("mouseleave", schedulePointerExit);
     markerGroup.addEventListener(
       "focus",
@@ -1107,20 +1175,7 @@ function renderChart(configurations, groupIdentifiers, modelColors) {
     hitTarget.addEventListener("mouseenter", cancelPointerExit);
     hitTarget.addEventListener("mousemove", (event) => {
       if (armedGroupId !== groupId) return;
-      const matrix = elements.chart.getScreenCTM();
-      if (!matrix) return;
-      const cursor = new DOMPoint(event.clientX, event.clientY)
-        .matrixTransform(matrix.inverse());
-      const nearest = group.reduce((best, configuration) => {
-        const marker = markersByConfig.get(configuration.config);
-        const distance = Math.hypot(
-          Number(marker.dataset.chartX) - cursor.x,
-          Number(marker.dataset.chartY) - cursor.y,
-        );
-        return best === null || distance < best.distance
-          ? { configuration, distance, marker }
-          : best;
-      }, null);
+      const nearest = nearestPointerPoint(event, group);
       if (nearest) {
         showChartDetails(nearest.configuration, nearest.marker, groupId);
       }

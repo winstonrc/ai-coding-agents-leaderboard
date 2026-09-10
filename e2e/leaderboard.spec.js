@@ -532,7 +532,7 @@ test("defaults, floor, table-only Pareto filter, and sorting are independent", a
   await expect(focusedLabel.locator("tspan").nth(1)).toHaveText("MEDIUM");
   await expect(page.locator(".chart-point-group").first()).toHaveAttribute("role", "img");
   await expect(page.locator(".chart-point-group").first().locator(".chart-hit-target"))
-    .toHaveAttribute("r", "16");
+    .toHaveAttribute("r", "12");
   await page.locator("#chart-heading").dispatchEvent("pointerdown", {
     bubbles: true,
     pointerType: "touch",
@@ -962,6 +962,89 @@ test("point hover arms its model line and snaps to nearby effort points", async 
   await expect(corridor).not.toHaveClass(/is-armed/);
   await expect(page.locator("#chart-detail")).toBeEmpty();
   await expect(page.locator(".chart-series.is-muted")).toHaveCount(0);
+});
+
+test("overlapping point targets select the point nearest the cursor", async ({ page }) => {
+  test.skip(
+    test.info().project.name === "mobile-320",
+    "Point hover is a pointer interaction.",
+  );
+  await routeFeed(page, feed({
+    rows: [
+      row({
+        config: "nearest-alpha",
+        mean_cost_usd: 5,
+        mean_duration_seconds: 1_200,
+      }),
+      row({
+        config: "nearby-beta",
+        harness: "agent-beta",
+        model: "model-beta",
+        mean_cost_usd: 5.1,
+        mean_duration_seconds: 1_210,
+      }),
+    ],
+  }));
+  await page.goto("/?formula=v1");
+
+  const alpha = page.locator('.chart-point-group[data-config="nearest-alpha"]');
+  const alphaBox = await alpha.boundingBox();
+  await page.mouse.move(
+    alphaBox.x + alphaBox.width / 2,
+    alphaBox.y + alphaBox.height / 2,
+  );
+
+  await expect(page.locator("#chart-detail")).toContainText("model-alpha [high]");
+});
+
+test("an armed model line keeps nearby models from stealing pointer focus", async ({ page }) => {
+  test.skip(
+    test.info().project.name === "mobile-320",
+    "The line corridor is a pointer-hover interaction.",
+  );
+  await routeFeed(page, feed({
+    rows: [
+      row({
+        config: "agent-alpha-medium",
+        reasoning_effort: "medium",
+        mean_cost_usd: 2,
+        mean_duration_seconds: 600,
+      }),
+      row({
+        config: "agent-alpha-max",
+        reasoning_effort: "max",
+        mean_cost_usd: 7,
+        mean_duration_seconds: 2_100,
+      }),
+      row({
+        config: "agent-beta-high",
+        harness: "agent-beta",
+        model: "model-beta",
+        mean_cost_usd: 6,
+        mean_duration_seconds: 1_800,
+      }),
+    ],
+  }));
+  await page.goto("/?formula=v1");
+
+  const medium = page.locator(
+    '.chart-point-group[data-config="agent-alpha-medium"]',
+  );
+  const beta = page.locator(
+    '.chart-point-group[data-config="agent-beta-high"]',
+  );
+  await medium.hover();
+  const betaBox = await beta.boundingBox();
+  await page.mouse.move(
+    betaBox.x + betaBox.width / 2,
+    betaBox.y + betaBox.height / 2,
+  );
+
+  await expect(page.locator("#chart-detail")).toContainText("model-alpha [max]");
+  await expect(page.locator(".chart-link-hit-target.is-armed")).toHaveAttribute(
+    "data-chart-group",
+    await medium.getAttribute("data-chart-group"),
+  );
 });
 
 test("dense chart labels avoid other labels and connectors", async ({ page }) => {
